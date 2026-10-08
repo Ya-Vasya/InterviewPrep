@@ -15,7 +15,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 
 - **Audience:** a single developer preparing for .NET interviews. There are no accounts, no sharing between users and no admin role. All data belongs to one local user. (If multi-user is wanted later, every entity below gets a `UserId`; see open questions.)
 - **Scope of content:** interview questions with a reference answer. Not a general learning platform or a coding-challenge judge.
-- **Persistence:** R2 and R4 need data that survives restarts (review history, study plan). The current `InMemoryQuestionRepository` is not sufficient, so a real database is a prerequisite for R2 onwards. Recommended: SQLite via EF Core (zero setup, one file), behind the existing repository-style interfaces.
+- **Persistence:** R2 and R4 need data that survives restarts (review history, study plan). The current `InMemoryQuestionRepository` is not sufficient, so a real database is a prerequisite for R2 onwards. Decided: PostgreSQL via EF Core (Npgsql), run locally through Docker Compose.
 - **Terminology:** a *question* is the content (text, reference answer, topic, difficulty). A *card* is a user's learning state for one question (see R2). One question has at most one card.
 
 ---
@@ -203,7 +203,7 @@ All derived from card state and the review log; nothing is entered by hand.
 
 ## Suggested delivery order
 
-1. **Foundation:** database (SQLite + EF Core), Topic enum and filters (R1).
+1. **Foundation:** database (PostgreSQL + EF Core), Topic enum and filters (R1).
 2. **Flashcards + SM-2** with review log (R2). This is the core loop and the data source for R4.
 3. **Study plan + progress dashboard** (R4).
 4. **AI** (R3): answer checking first (highest value, feeds R2), then explanations, then question generation.
@@ -217,7 +217,7 @@ These were not specified. The document assumes the default shown; change the def
 | # | Question | Assumed default |
 |---|----------|-----------------|
 | 1 | Is this single-user forever, or will others use it (accounts, hosting)? | Single user, local |
-| 2 | Which database? | SQLite via EF Core |
+| 2 | Which database? | PostgreSQL via EF Core (replaced the initial SQLite choice) |
 | 3 | Which AI provider and model? | Anthropic Claude API |
 | 4 | SM-2 or FSRS? | SM-2 behind `IScheduler`; FSRS later |
 | 5 | Should AI-checked answers count as reviews automatically, or only after the user confirms the rating? | Only after the user confirms |

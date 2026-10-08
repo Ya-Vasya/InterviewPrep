@@ -28,8 +28,15 @@ Details, acceptance criteria and open questions: [docs/requirements.md](docs/req
 
 - .NET 10 SDK — `dotnet --version`
 - Node.js 20+ — `node -v`
+- Docker — runs the PostgreSQL database (and is required by the backend tests)
 
 ## Run
+
+Database (PostgreSQL on localhost:5432, data kept in the `pg-data` volume):
+
+```bash
+docker compose up -d db
+```
 
 Backend (http://localhost:5080):
 
@@ -67,4 +74,6 @@ dotnet test
 
 OpenAPI document (Development only): http://localhost:5080/openapi/v1.json
 
-Data is stored in SQLite (`ConnectionStrings:Default`, default `backend/src/InterviewPrep.Api/interviewprep.db`). Migrations are applied and seed questions loaded on startup. Delete the file to reset.
+Data is stored in PostgreSQL (`ConnectionStrings:Default`, default `Host=localhost;Port=5432;Database=interviewprep;Username=postgres;Password=postgres`, matching the `db` service in `docker-compose.yml`). Migrations are applied and seed questions loaded on startup. Run `docker compose down -v` to wipe the data.
+
+The backend tests start a throwaway PostgreSQL container with Testcontainers, so Docker must be running; they do not touch the dev database.
