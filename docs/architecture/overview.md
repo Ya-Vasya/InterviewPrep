@@ -25,7 +25,7 @@ Status: **proposed**, not yet implemented.
 
 Same order as "Suggested delivery order" in [requirements.md](../requirements.md), with the structural work first.
 
-1. Add SQLite + `AppDbContext`, move to `Features/` folders, add the `Topic` enum (R1). This is the point to drop `IQuestionRepository` (see [backend.md](backend.md#data-access)).
+1. Add PostgreSQL + `AppDbContext`, move to `Features/` folders, add the `Topic` enum (R1). This is the point to drop `IQuestionRepository` (see [backend.md](backend.md#data-access)).
 2. Frontend: add TanStack Query and React Router, and split `App.tsx` into `features/questions` (see [frontend.md](frontend.md)).
 3. Build `Study` with `Sm2Scheduler` and its unit tests, then the study UI (R2).
 4. Build `Plan` + `Progress`, then the dashboard (R4).

@@ -8,7 +8,7 @@ public static class PersistenceExtensions
     {
         // The connection string is read lazily so tests can override it before the host is built.
         services.AddDbContext<AppDbContext>((sp, options) => options
-            .UseSqlite(sp.GetRequiredService<IConfiguration>().GetConnectionString("Default"))
+            .UseNpgsql(sp.GetRequiredService<IConfiguration>().GetConnectionString("Default"))
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
         return services;
