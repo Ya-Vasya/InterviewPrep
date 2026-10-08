@@ -41,6 +41,20 @@ EF Core migrations (the `dotnet-ef` local tool is in `backend/dotnet-tools.json`
 dotnet ef migrations add <Name> --project src/InterviewPrep.Api --output-dir Data/Migrations
 ```
 
+## Docker
+
+Each project has its own `Dockerfile` (build context is the project folder); `docker-compose.yml` at the repo root runs both. Not yet verified with a real build.
+
+```bash
+docker compose up --build        # site at http://localhost:8080
+docker build -t interviewprep-api backend
+docker build -t interviewprep-web frontend
+```
+
+- Backend image: multi-stage .NET 10 SDK -> ASP.NET runtime, listens on 8080, runs non-root. The SQLite file is `/data/interviewprep.db` (set via `ConnectionStrings__Default`); `/data` is a volume (`api-data` in compose).
+- Frontend image: Node build -> nginx. `nginx.conf.template` proxies `/api/` to `BACKEND_URL` (default `http://backend:8080`) and falls back to `index.html` for SPA routes, mirroring the Vite dev proxy. Keep the client's relative `/api/...` paths.
+- Containers run in Production, so the OpenAPI document is not served, and CORS is not needed because the browser only talks to nginx.
+
 ## Architecture
 
 **Backend** (`backend/src/InterviewPrep.Api`): vertical slices, no controllers. `Program.cs` is composition only: `AddPersistence()`, `InitializeDatabaseAsync()` (applies migrations, then seeds), and `MapQuestionEndpoints()`.
