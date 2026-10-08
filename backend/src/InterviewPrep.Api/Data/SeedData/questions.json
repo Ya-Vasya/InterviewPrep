@@ -1,0 +1,205 @@
+[
+  {
+    "topic": "CSharp", "difficulty": "Junior", "tags": ["types", "memory"],
+    "text": "What is the difference between a class and a struct?",
+    "answer": "Classes are reference types allocated on the heap; structs are value types copied by value. Structs suit small, immutable data."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Junior", "tags": ["types", "memory"],
+    "text": "What are boxing and unboxing?",
+    "answer": "Boxing wraps a value type in an object on the heap (an allocation); unboxing extracts it back with a cast. Avoid it in hot paths, for example with generics instead of `object`."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Junior", "tags": ["types"],
+    "text": "What is the difference between `==` and `.Equals()`?",
+    "answer": "`==` can be overloaded and for reference types compares references by default; `.Equals()` is virtual and defines logical equality. `string` and records overload both to compare by value."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Junior", "tags": ["nullability"],
+    "text": "What are nullable reference types and what do they guarantee?",
+    "answer": "A compile-time feature (`<Nullable>enable</Nullable>`) where flow analysis warns about possible null dereferences. It guarantees nothing at runtime: a `string` can still be null if the warnings are ignored."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Middle", "tags": ["async"],
+    "text": "What does async/await do under the hood?",
+    "answer": "The compiler rewrites the method into a state machine. `await` registers a continuation on the awaited task and frees the thread until it completes."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Middle", "tags": ["async"],
+    "text": "Why is `async void` discouraged, and what is `ConfigureAwait(false)` for?",
+    "answer": "`async void` cannot be awaited and exceptions escape to the synchronization context, possibly crashing the process; use it only for event handlers. `ConfigureAwait(false)` skips resuming on the captured context, which avoids deadlocks and overhead in library code. ASP.NET Core has no synchronization context, so it matters little there."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Middle", "tags": ["linq"],
+    "text": "What is deferred execution in LINQ?",
+    "answer": "A query such as `Where` or `Select` is not run when defined, only when enumerated (`foreach`, `ToList`, `Count`). Enumerating twice runs it twice, and the source can change in between. Materialize with `ToList()` when you need a snapshot."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Middle", "tags": ["memory", "gc"],
+    "text": "How does the garbage collector work, and what are generations?",
+    "answer": "A tracing, compacting GC. New objects go to gen 0; survivors are promoted to gen 1 and then gen 2. Most objects die young, so gen 0 collections are cheap. Large objects (85,000 bytes or more) go to the Large Object Heap and are collected with gen 2."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Senior", "tags": ["memory", "performance"],
+    "text": "When would you use `Span<T>`, and what are its restrictions?",
+    "answer": "For slicing arrays, strings or stack memory without allocating. It is a `ref struct`, so it cannot be stored on the heap: no fields in classes, no capture in lambdas, and no use across `await` (use `Memory<T>` instead)."
+  },
+  {
+    "topic": "CSharp", "difficulty": "Senior", "tags": ["async", "concurrency"],
+    "text": "How do you cancel an async operation, and how do you avoid unbounded parallelism?",
+    "answer": "Pass a `CancellationToken` through every async call and check or forward it; link tokens for timeouts. For bounded parallelism use `SemaphoreSlim`, `Parallel.ForEachAsync` with `MaxDegreeOfParallelism`, or `Channel<T>` with a fixed number of consumers."
+  },
+
+  {
+    "topic": "AspNetCore", "difficulty": "Junior", "tags": ["di"],
+    "text": "What are the service lifetimes in the built-in DI container?",
+    "answer": "Transient (new instance each time), Scoped (one per request), Singleton (one for the app). Don't inject scoped services into singletons."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Junior", "tags": ["middleware"],
+    "text": "How does the middleware pipeline work?",
+    "answer": "Each middleware receives `HttpContext` and a `next` delegate, can act before/after calling next, or short-circuit. Order of registration matters."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Junior", "tags": ["configuration"],
+    "text": "How does configuration work, and in what order are sources applied?",
+    "answer": "`IConfiguration` merges providers; later ones override earlier ones. Default order: appsettings.json, appsettings.{Environment}.json, user secrets (Development), environment variables, command-line arguments."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Middle", "tags": ["routing", "minimal-apis"],
+    "text": "What are the differences between minimal APIs and controllers?",
+    "answer": "Minimal APIs use endpoint routing with lambda handlers, less ceremony and lower overhead. Controllers add model binding conventions, filters, `[ApiController]` behaviors and a richer ecosystem. Minimal APIs use endpoint filters and route groups to share behavior."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Middle", "tags": ["auth"],
+    "text": "What is the difference between authentication and authorization in ASP.NET Core?",
+    "answer": "Authentication establishes who the caller is (`UseAuthentication` builds a `ClaimsPrincipal` from a cookie, JWT, etc.). Authorization decides what they may do (`UseAuthorization`, `[Authorize]`, policies, requirements). Authentication must run first."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Middle", "tags": ["errors", "middleware"],
+    "text": "How do you handle exceptions globally and return consistent errors?",
+    "answer": "Use `UseExceptionHandler` (or an `IExceptionHandler`) together with `AddProblemDetails` so every error is an RFC 9457 `ProblemDetails` response. Map expected failures such as validation to 4xx explicitly; do not leak stack traces in production."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Middle", "tags": ["http", "httpclient"],
+    "text": "Why should you use `IHttpClientFactory` instead of `new HttpClient()`?",
+    "answer": "Creating a client per request can exhaust sockets; a single static client never refreshes DNS. The factory pools and recycles handlers, supports named/typed clients and integrates with Polly-style resilience handlers."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Senior", "tags": ["caching", "performance"],
+    "text": "What caching options does ASP.NET Core offer and when do you use each?",
+    "answer": "Response caching/output caching for whole responses; `IMemoryCache` for per-instance data; `IDistributedCache` (Redis) when multiple instances must share it; `HybridCache` combines both with stampede protection. Decide on expiry and invalidation first."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Senior", "tags": ["performance", "async"],
+    "text": "How do you diagnose thread-pool starvation in an ASP.NET Core app?",
+    "answer": "Symptoms: rising latency with low CPU, requests queueing. Usual cause is sync-over-async (`.Result`, `.Wait()`) blocking pool threads. Check `dotnet-counters` (thread pool queue length), capture a dump or trace, and make the call chain async end to end."
+  },
+  {
+    "topic": "AspNetCore", "difficulty": "Senior", "tags": ["testing"],
+    "text": "How do you write integration tests for an ASP.NET Core API?",
+    "answer": "Use `WebApplicationFactory<Program>` to host the real app in memory and call it through `HttpClient`. Override services in `ConfigureTestServices` (database, clock, external clients). Use a real database such as in-memory SQLite or a container rather than mocking repositories."
+  },
+
+  {
+    "topic": "Sql", "difficulty": "Junior", "tags": ["joins"],
+    "text": "What is the difference between INNER JOIN, LEFT JOIN and FULL OUTER JOIN?",
+    "answer": "INNER returns only rows matching in both tables. LEFT returns all left rows, with NULLs where the right has no match. FULL OUTER returns all rows from both sides, with NULLs where either side has no match."
+  },
+  {
+    "topic": "Sql", "difficulty": "Junior", "tags": ["aggregation"],
+    "text": "What is the difference between WHERE and HAVING?",
+    "answer": "WHERE filters rows before grouping; HAVING filters groups after aggregation, so it can use aggregates such as `COUNT(*) > 5`."
+  },
+  {
+    "topic": "Sql", "difficulty": "Junior", "tags": ["keys"],
+    "text": "What is the difference between a primary key and a unique constraint?",
+    "answer": "A table has one primary key and it cannot be NULL; it may have many unique constraints, which allow NULLs (the exact rule varies by engine). Both are backed by a unique index."
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["indexes"],
+    "text": "What is the difference between a clustered and a non-clustered index?",
+    "answer": "A clustered index defines the physical row order (one per table); a non-clustered index is a separate structure pointing to rows."
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["transactions"],
+    "text": "What are the transaction isolation levels and which anomalies do they prevent?",
+    "answer": "Read Uncommitted allows dirty reads. Read Committed prevents dirty reads. Repeatable Read also prevents non-repeatable reads. Serializable also prevents phantom reads. Snapshot isolation avoids blocking readers by using row versions."
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["indexes", "performance"],
+    "text": "Why might a query not use an index on a column?",
+    "answer": "Functions or casts on the column (`WHERE YEAR(date) = 2025`), a leading wildcard in LIKE, low selectivity, implicit type conversion, stale statistics, or a non-covering index where lookups would cost more than a scan. Check the execution plan."
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["window-functions"],
+    "text": "What are window functions and when would you use `ROW_NUMBER()`?",
+    "answer": "They compute a value over a set of rows related to the current row without collapsing them, using `OVER (PARTITION BY ... ORDER BY ...)`. `ROW_NUMBER()` is typical for top-N per group, for example the latest order per customer, and for de-duplication.\n\n```sql\nSELECT * FROM (\n  SELECT o.*, ROW_NUMBER() OVER (PARTITION BY CustomerId ORDER BY CreatedAt DESC) AS rn\n  FROM Orders o\n) x WHERE rn = 1;\n```"
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["ef core", "performance"],
+    "text": "What is the N+1 query problem in EF Core and how do you avoid it?",
+    "answer": "Loading a list, then lazily querying related data per item. Avoid with `Include`, projections (`Select`), or split queries."
+  },
+  {
+    "topic": "Sql", "difficulty": "Middle", "tags": ["ef core", "performance"],
+    "text": "When should you use `AsNoTracking()` in EF Core?",
+    "answer": "For read-only queries. Without tracking, EF skips identity resolution and snapshotting, so queries are faster and use less memory. Use tracking when you will modify and save the entities."
+  },
+  {
+    "topic": "Sql", "difficulty": "Senior", "tags": ["ef core", "concurrency"],
+    "text": "How do you handle concurrent updates to the same row in EF Core?",
+    "answer": "Optimistic concurrency: add a concurrency token (`[Timestamp]` row version or `IsConcurrencyToken`). `SaveChanges` throws `DbUpdateConcurrencyException` when the row changed since it was read; catch it and reload, merge or ask the user. Use pessimistic locks only when contention is high."
+  },
+
+  {
+    "topic": "SystemDesign", "difficulty": "Junior", "tags": ["scaling"],
+    "text": "What is the difference between vertical and horizontal scaling?",
+    "answer": "Key points:\n\n- Vertical: bigger machine. Simple, but has a ceiling and is a single point of failure.\n- Horizontal: more machines behind a load balancer. Scales further and tolerates failures, but requires stateless services or shared state."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Junior", "tags": ["caching"],
+    "text": "Where can you cache in a web system and what are the trade-offs?",
+    "answer": "Key points:\n\n- Layers: browser, CDN, reverse proxy, application (in-memory, Redis), database.\n- Benefit: lower latency and load.\n- Cost: stale data and invalidation complexity. Choose a TTL or explicit invalidation per data type."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Middle", "tags": ["load-balancing"],
+    "text": "How does a load balancer work, and which algorithms are common?",
+    "answer": "Key points:\n\n- Distributes requests over healthy instances (health checks remove failed ones).\n- Algorithms: round robin, least connections, weighted, consistent hashing for sticky/cache-friendly routing.\n- L4 (TCP) vs L7 (HTTP, can route by path or header).\n- The load balancer itself must not be a single point of failure."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Middle", "tags": ["databases", "scaling"],
+    "text": "How do you scale a relational database?",
+    "answer": "Key points:\n\n- Indexing and query tuning first.\n- Read replicas for read-heavy loads (replication lag means eventual consistency on reads).\n- Caching in front.\n- Partitioning/sharding for write scale: pick a shard key that spreads load evenly; cross-shard queries and transactions get hard."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Middle", "tags": ["messaging"],
+    "text": "When would you introduce a message queue?",
+    "answer": "Key points:\n\n- Decouple producers from consumers and absorb traffic spikes (load leveling).\n- Run slow work asynchronously (emails, reports).\n- Trade-offs: eventual consistency, at-least-once delivery so consumers must be idempotent, poison messages need a dead-letter queue, ordering is limited."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Middle", "tags": ["api-design"],
+    "text": "How do you design an idempotent API for payments or orders?",
+    "answer": "Key points:\n\n- Client sends an idempotency key with the request.\n- Server stores the key with the result; a retry with the same key returns the stored result instead of repeating the action.\n- Use a unique constraint to make the check atomic; expire old keys.\n- PUT and DELETE are idempotent by definition; POST needs the key."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Senior", "tags": ["distributed-systems"],
+    "text": "Explain the CAP theorem and how it affects design choices.",
+    "answer": "Key points:\n\n- During a network partition you must choose between consistency (reject or delay requests) and availability (serve possibly stale data).\n- Without a partition you still trade latency against consistency (PACELC).\n- Choose per use case: payments favor consistency; feeds and counters favor availability."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Senior", "tags": ["resilience"],
+    "text": "How do you make calls between services resilient?",
+    "answer": "Key points:\n\n- Timeouts on every call.\n- Retries with exponential backoff and jitter, only for idempotent operations.\n- Circuit breaker to stop hammering a failing dependency.\n- Bulkheads to isolate resource pools; fallbacks or graceful degradation.\n- Rate limiting and backpressure to protect the callee."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Senior", "tags": ["architecture"],
+    "text": "Monolith or microservices: how do you decide?",
+    "answer": "Key points:\n\n- Start with a modular monolith unless there is a clear need to split.\n- Split for independent scaling, independent deployment by separate teams, or fault isolation.\n- Costs of microservices: network failures, distributed transactions (sagas), observability, versioning, operational overhead.\n- Split along business boundaries, not technical layers."
+  },
+  {
+    "topic": "SystemDesign", "difficulty": "Senior", "tags": ["case-study"],
+    "text": "Design a URL shortener.",
+    "answer": "Key points:\n\n- Requirements: create short link, redirect with low latency, read-heavy (about 100:1).\n- ID generation: base62 of a counter or distributed ID (Snowflake), or random with a collision check.\n- Storage: key-value store keyed by short code; cache hot links in Redis; redirect with 301/302.\n- Scale: stateless app servers behind a load balancer, shard by code, async analytics via a queue.\n- Extras: expiry, custom aliases, abuse protection and rate limiting."
+  }
+]

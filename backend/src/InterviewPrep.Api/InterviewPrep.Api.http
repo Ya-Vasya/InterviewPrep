@@ -1,0 +1,21 @@
+@host = http://localhost:5080
+
+GET {{host}}/api/health
+
+###
+GET {{host}}/api/topics
+
+###
+GET {{host}}/api/questions?topic=CSharp&difficulty=Middle&tag=async
+
+###
+POST {{host}}/api/questions
+Content-Type: application/json
+
+{
+  "topic": "CSharp",
+  "text": "What is boxing?",
+  "answer": "Converting a value type to object (or an interface), which allocates on the heap.",
+  "difficulty": "Junior",
+  "tags": ["types", "memory"]
+}

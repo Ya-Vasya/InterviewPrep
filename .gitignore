@@ -1,0 +1,19 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+# Node
+node_modules/
+dist/
+*.local
+# Misc
+.env
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.db
+*.db-shm
+*.db-wal
+.claude/settings.local.json
