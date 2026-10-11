@@ -65,7 +65,7 @@ public static class DatabaseInitializer
 
         foreach (var seed in seeds)
         {
-            var tags = seed.Tags.Select(t => t.Trim().ToLowerInvariant()).Distinct().ToList();
+            var tags = QuestionTags.NormalizeAll(seed.Tags);
 
             if (existingById.TryGetValue(seed.Id, out var question))
             {

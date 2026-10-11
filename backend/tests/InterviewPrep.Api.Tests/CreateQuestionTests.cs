@@ -55,9 +55,9 @@ public class CreateQuestionTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Post(Valid(topic: "systemdesign", difficulty: "Senior", text: "Design a rate limiter.", tags: ["rate-limiting"]));
 
         Assert.Equal(before + 1, await TopicCount(Topic.SystemDesign));
-        var found = await _client.GetFromJsonAsync<List<QuestionResponse>>(
+        var found = await _client.GetFromJsonAsync<PagedResponse<QuestionResponse>>(
             "/api/questions?topic=SystemDesign&tag=rate-limiting", Json);
-        Assert.Equal("Design a rate limiter.", Assert.Single(found!).Text);
+        Assert.Equal("Design a rate limiter.", Assert.Single(found!.Items).Text);
     }
 
     [Theory]

@@ -18,8 +18,16 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
 
     private readonly HttpClient _client = factory.CreateClient();
 
-    private Task<List<QuestionResponse>?> GetQuestions(string query = "") =>
-        _client.GetFromJsonAsync<List<QuestionResponse>>($"/api/questions{query}", Json);
+    private Task<PagedResponse<QuestionResponse>?> GetPage(string query = "") =>
+        _client.GetFromJsonAsync<PagedResponse<QuestionResponse>>($"/api/questions{query}", Json);
+
+    /// <summary>All matches in one page (the seed data is far below the maximum page size).</summary>
+    private async Task<List<QuestionResponse>?> GetQuestions(string query = "")
+    {
+        var separator = query.Length == 0 ? "?" : "&";
+        var page = await GetPage($"{query}{separator}limit={Paging.MaxLimit}");
+        return page?.Items.ToList();
+    }
 
     [Fact]
     public async Task Health_ReturnsOk()
@@ -137,6 +145,83 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
     }
 
     [Fact]
+    public async Task GetQuestions_ReturnsAPageWithTotalLimitAndOffset()
+    {
+        var all = await GetQuestions();
+
+        var page = await GetPage("?limit=5");
+
+        Assert.NotNull(page);
+        Assert.Equal(5, page.Items.Count);
+        Assert.Equal(all!.Count, page.Total);
+        Assert.Equal(5, page.Limit);
+        Assert.Equal(0, page.Offset);
+    }
+
+    [Fact]
+    public async Task GetQuestions_WithoutLimit_UsesTheDefaultPageSize()
+    {
+        var page = await GetPage();
+
+        Assert.NotNull(page);
+        Assert.Equal(Paging.DefaultLimit, page.Limit);
+        Assert.Equal(0, page.Offset);
+    }
+
+    [Fact]
+    public async Task GetQuestions_PagesCoverEveryQuestionOnceInTheSameOrder()
+    {
+        var all = await GetQuestions();
+        var walked = new List<Guid>();
+
+        for (var offset = 0; offset < all!.Count; offset += 7)
+        {
+            var page = await GetPage($"?limit=7&offset={offset}");
+            walked.AddRange(page!.Items.Select(i => i.Id));
+        }
+
+        Assert.Equal(all.Select(q => q.Id), walked);
+    }
+
+    [Fact]
+    public async Task GetQuestions_WithOffsetPastTheEnd_ReturnsNoItemsButTheTotal()
+    {
+        var all = await GetQuestions();
+
+        var page = await GetPage("?offset=100000");
+
+        Assert.NotNull(page);
+        Assert.Empty(page.Items);
+        Assert.Equal(all!.Count, page.Total);
+    }
+
+    [Fact]
+    public async Task GetQuestions_TotalCountsMatchesOfTheFilter_NotThePage()
+    {
+        var sql = await GetQuestions("?topic=Sql");
+
+        var page = await GetPage("?topic=Sql&limit=2");
+
+        Assert.NotNull(page);
+        Assert.Equal(2, page.Items.Count);
+        Assert.Equal(sql!.Count, page.Total);
+    }
+
+    [Theory]
+    [InlineData("?limit=0", "limit")]
+    [InlineData("?limit=201", "limit")]
+    [InlineData("?limit=-5", "limit")]
+    [InlineData("?offset=-1", "offset")]
+    public async Task GetQuestions_WithInvalidPaging_ReturnsValidationProblem(string query, string field)
+    {
+        var response = await _client.GetAsync($"/api/questions{query}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(Json);
+        Assert.Contains(field, problem!.Errors.Keys);
+    }
+
+    [Fact]
     public async Task EfCoreQuestions_LiveUnderSqlWithEfCoreTag()
     {
         var questions = await GetQuestions("?tag=ef core");
@@ -159,7 +244,7 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
         var json = await _client.GetStringAsync("/api/questions?topic=CSharp&difficulty=Junior");
 
         using var doc = JsonDocument.Parse(json);
-        var first = doc.RootElement[0];
+        var first = doc.RootElement.GetProperty("items")[0];
         Assert.Equal("CSharp", first.GetProperty("topic").GetString());
         Assert.Equal("Junior", first.GetProperty("difficulty").GetString());
         Assert.Equal("Seed", first.GetProperty("source").GetString());

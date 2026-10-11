@@ -50,7 +50,7 @@ Request/response records are the API contract (what `frontend/src/api/types.ts` 
 
 ### Validation
 
-Keep hand-written validation returning `Results.ValidationProblem`. Extract a small helper (`Errors.Add("topic", "...")`, `.ToProblem()`) once there are more than two endpoints. FluentValidation is not worth it at this size.
+Keep hand-written validation returning `TypedResults.ValidationProblem`, collected through the small `ValidationErrors` helper in `Common/` (`Add`, `AddNotOneOf`, `TryParseRequired`, `ToProblem()`). Per-feature rules live in a validator class next to the endpoints (`QuestionValidator`). FluentValidation is not worth it at this size.
 
 ### Cross-cutting setup
 

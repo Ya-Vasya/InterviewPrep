@@ -48,7 +48,11 @@ public static class StudyEndpoints
         string? tz, AppDbContext db, TimeProvider time, IOptions<StudyOptions> options, CancellationToken ct)
     {
         if (!StudyDay.TryGetZone(tz, out var zone))
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["tz"] = ["Unknown time zone."] });
+        {
+            var errors = new ValidationErrors();
+            errors.Add("tz", "Unknown time zone.");
+            return errors.ToProblem();
+        }
 
         var now = time.GetUtcNow().UtcDateTime;
         var allowance = await GetAllowanceAsync(db, options.Value, StudyDay.StartOfDayUtc(now, zone), ct);
@@ -90,7 +94,7 @@ public static class StudyEndpoints
         AppDbContext db, IScheduler scheduler, TimeProvider time, IOptions<StudyOptions> options,
         CancellationToken ct)
     {
-        var errors = new Dictionary<string, string[]>();
+        var errors = new ValidationErrors();
 
         var topics = new List<Topic>();
         foreach (var name in topic ?? [])
@@ -98,17 +102,17 @@ public static class StudyEndpoints
             if (EnumParsing.TryParseName<Topic>(name, out var parsed))
                 topics.Add(parsed);
             else
-                errors["topic"] = [$"Topic must be one of: {EnumParsing.AllowedValues<Topic>()}."];
+                errors.AddNotOneOf<Topic>("topic");
         }
 
         if (limit is < 1 or > MaxQueueLimit)
-            errors["limit"] = [$"Limit must be between 1 and {MaxQueueLimit}."];
+            errors.Add("limit", $"Limit must be between 1 and {MaxQueueLimit}.");
 
         if (!StudyDay.TryGetZone(tz, out var zone))
-            errors["tz"] = ["Unknown time zone."];
+            errors.Add("tz", "Unknown time zone.");
 
-        if (errors.Count > 0)
-            return TypedResults.ValidationProblem(errors);
+        if (errors.Any)
+            return errors.ToProblem();
 
         var now = time.GetUtcNow().UtcDateTime;
         var allowance = await GetAllowanceAsync(db, options.Value, StudyDay.StartOfDayUtc(now, zone), ct);
@@ -158,25 +162,21 @@ public static class StudyEndpoints
     private static async Task<Results<Ok<ReviewResponse>, ValidationProblem, ProblemHttpResult>> PostReview(
         ReviewRequest request, AppDbContext db, IScheduler scheduler, TimeProvider time, CancellationToken ct)
     {
-        var errors = new Dictionary<string, string[]>();
-        var rating = default(Rating);
+        var errors = new ValidationErrors();
 
         if (request.QuestionId is null || request.QuestionId == Guid.Empty)
-            errors["questionId"] = ["Question id is required."];
+            errors.Add("questionId", "Question id is required.");
 
         if (request.ReviewId is null || request.ReviewId == Guid.Empty)
-            errors["reviewId"] = ["Review id is required."];
+            errors.Add("reviewId", "Review id is required.");
 
-        if (string.IsNullOrWhiteSpace(request.Rating))
-            errors["rating"] = ["Rating is required."];
-        else if (!EnumParsing.TryParseName(request.Rating, out rating))
-            errors["rating"] = [$"Rating must be one of: {EnumParsing.AllowedValues<Rating>()}."];
+        errors.TryParseRequired<Rating>("rating", request.Rating, out var rating);
 
-        if (errors.Count == 0 && !await db.Questions.AnyAsync(q => q.Id == request.QuestionId, ct))
-            errors["questionId"] = ["No question with this id exists."];
+        if (!errors.Any && !await db.Questions.AnyAsync(q => q.Id == request.QuestionId, ct))
+            errors.Add("questionId", "No question with this id exists.");
 
-        if (errors.Count > 0)
-            return TypedResults.ValidationProblem(errors);
+        if (errors.Any)
+            return errors.ToProblem();
 
         var questionId = request.QuestionId!.Value;
         var reviewId = request.ReviewId!.Value;

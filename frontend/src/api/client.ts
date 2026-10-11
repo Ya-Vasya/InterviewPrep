@@ -19,6 +19,14 @@ export interface TopicSummary {
   questionCount: number
 }
 
+/** A page of a list endpoint (mirrors PagedResponse<T> on the backend); `total` counts all matches. */
+export interface Page<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface Question {
   id: string
   topic: Topic
@@ -137,8 +145,14 @@ function studyParams(topics: readonly Topic[], extra: Record<string, string | un
 
 export const api = {
   getTopics: () => get<TopicSummary[]>('/api/topics'),
-  getQuestions: (topic?: Topic) =>
-    get<Question[]>(topic ? `/api/questions?topic=${encodeURIComponent(topic)}` : '/api/questions'),
+  getQuestions: ({ topic, limit, offset }: { topic?: Topic; limit?: number; offset?: number } = {}) => {
+    const params = new URLSearchParams()
+    if (topic) params.set('topic', topic)
+    if (limit !== undefined) params.set('limit', String(limit))
+    if (offset !== undefined) params.set('offset', String(offset))
+    const query = params.toString()
+    return get<Page<Question>>(query ? `/api/questions?${query}` : '/api/questions')
+  },
 
   getStudySummary: () => get<StudySummary>(`/api/study/summary?${new URLSearchParams({ tz: browserTimeZone() })}`),
   getStudyQueue: (topics: readonly Topic[], limit?: number) =>

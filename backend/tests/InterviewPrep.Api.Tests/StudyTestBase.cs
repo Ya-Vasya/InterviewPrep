@@ -29,7 +29,8 @@ public abstract class StudyTestBase
     }
 
     protected async Task<List<QuestionResponse>> GetQuestions(Topic topic) =>
-        (await Client.GetFromJsonAsync<List<QuestionResponse>>($"/api/questions?topic={topic}", Json))!;
+        (await Client.GetFromJsonAsync<PagedResponse<QuestionResponse>>(
+            $"/api/questions?topic={topic}&limit={Paging.MaxLimit}", Json))!.Items.ToList();
 
     protected Task<HttpResponseMessage> PostReview(Guid questionId, string rating, Guid? reviewId = null) =>
         Client.PostAsJsonAsync(
