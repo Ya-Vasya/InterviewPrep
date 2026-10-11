@@ -1,0 +1,121 @@
+/* Study setup */
+.study-topics {
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px 12px;
+  background: var(--surface); margin: 0 0 20px;
+}
+.study-topics legend { padding: 0 6px; color: var(--muted); font-size: 0.9rem; }
+.study-topic {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.study-topic:last-child { border-bottom: 0; }
+.study-topic input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.study-topic-name { flex: 1; font-weight: 600; }
+.study-count { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+
+.study-start-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
+.study-start {
+  display: inline-block; text-decoration: none; text-align: center;
+  padding: 12px 28px; border-radius: 8px; font-size: 1.05rem; font-weight: 600;
+  background: var(--accent); border: 1px solid var(--accent); color: #fff;
+}
+.study-start:disabled { background: transparent; color: var(--muted); border-color: var(--border); cursor: not-allowed; }
+.study-note { color: var(--muted); margin: 8px 0; }
+.study-start-row .study-note { margin: 0; }
+
+/* Session toolbar */
+.study-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.study-back { text-decoration: none; }
+.study-progress { color: var(--muted); font-variant-numeric: tabular-nums; }
+.study-undo:disabled { opacity: 0.4; cursor: default; }
+.study-bar { height: 4px; border-radius: 2px; background: var(--border); margin-bottom: 20px; overflow: hidden; }
+.study-bar > div { height: 100%; background: var(--accent); transition: width 0.25s ease; }
+
+/* Card stack: the next cards peek out from behind the current one */
+.study-stack { position: relative; margin-bottom: 28px; }
+.study-stack::before, .study-stack::after {
+  content: ''; position: absolute; z-index: 0; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); display: none;
+}
+.study-stack[data-behind='1']::before,
+.study-stack[data-behind='2']::before,
+.study-stack[data-behind='2']::after { display: block; }
+.study-stack::before { inset: 8px 10px -8px 10px; }
+.study-stack::after { inset: 16px 20px -16px 20px; opacity: 0.7; }
+.study-stack[data-behind='2'] { margin-bottom: 36px; }
+
+.study-card {
+  position: relative; z-index: 1; display: flex; flex-direction: column; perspective: 800px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.06);
+}
+.study-card-meta {
+  display: flex; align-items: center; gap: 10px; padding: 14px 20px 0;
+  font-size: 0.85rem; color: var(--muted);
+}
+.study-card-meta .level { margin-left: auto; }
+.study-badge {
+  background: var(--accent); color: #fff; border-radius: 999px; padding: 1px 8px;
+  font-size: 0.75rem; font-weight: 600;
+}
+
+.study-face { padding: 16px 20px 22px; }
+.study-face-front {
+  display: flex; flex-direction: column; gap: 24px; justify-content: space-between;
+  width: 100%; min-height: 240px; text-align: left; cursor: pointer;
+  border: 0; background: none; border-radius: 12px; color: inherit;
+  animation: study-flip 0.22s ease-out;
+}
+.study-face-front:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.study-face-back { animation: study-flip 0.22s ease-out; }
+.study-question { font-size: 1.25rem; font-weight: 600; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.study-question-small { font-size: 1rem; color: var(--muted); }
+.study-hint { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
+.study-face-back hr { border: 0; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* Rating buttons: below the answer, only rendered once the card is flipped */
+.study-ratings { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0 0 40px; }
+.study-rate {
+  position: relative; padding: 16px 8px; font-weight: 600; border-radius: 10px; border-width: 2px;
+  color: var(--rate-color); border-color: var(--rate-color);
+  background: color-mix(in srgb, var(--rate-color) 10%, var(--surface));
+}
+.study-rate:disabled { opacity: 0.5; cursor: default; }
+.study-rate kbd { position: absolute; top: 4px; right: 6px; font: inherit; font-size: 0.7rem; opacity: 0.6; }
+@media (hover: none) { .study-rate kbd { display: none; } }
+.rate-again { --rate-color: #c0392b; }
+.rate-hard { --rate-color: #b26a00; }
+.rate-good { --rate-color: #2e8b57; }
+.rate-easy { --rate-color: #2b6fd4; }
+@media (prefers-color-scheme: dark) {
+  .rate-again { --rate-color: #ff7b6b; }
+  .rate-hard { --rate-color: #f0a73c; }
+  .rate-good { --rate-color: #5fd08f; }
+  .rate-easy { --rate-color: #78a9ff; }
+}
+@media (min-width: 560px) { .study-ratings { grid-template-columns: repeat(4, 1fr); } }
+
+.study-done { text-align: center; padding: 48px 0; }
+.study-done .study-start { margin-top: 12px; }
+
+/* The card that was just rated flies off while the next one is already in place */
+.study-card-leaving {
+  position: absolute; z-index: 2; inset: 0 0 auto 0; pointer-events: none; padding: 20px;
+  animation: study-leave 0.32s ease-in forwards;
+}
+.leave-again, .leave-hard { --tx: -120%; --rot: -10deg; }
+.leave-good { --tx: 120%; --rot: 8deg; }
+.leave-easy { --tx: 140%; --rot: 14deg; }
+@keyframes study-leave {
+  to { transform: translateX(var(--tx)) rotate(var(--rot)); opacity: 0; }
+}
+@keyframes study-flip {
+  from { transform: rotateY(-80deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-card-leaving { animation-duration: 0.01s; }
+  .study-face-front, .study-face-back { animation: none; }
+  .study-bar > div { transition: none; }
+}

@@ -7,7 +7,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 | # | Requirement | Status |
 |---|-------------|--------|
 | R1 | Questions by topic | 🟡 (backend done; UI selector and persisted selection pending) |
-| R2 | Flashcards and spaced repetition | ⬜ |
+| R2 | Flashcards and spaced repetition | ✅ (suspend is API-only; there is no suspend button in the UI yet) |
 | R3 | AI: generate questions, check answers, explain mistakes | ⬜ |
 | R4 | Progress tracker based on a study plan | ⬜ |
 
@@ -15,7 +15,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 
 - **Audience:** a single developer preparing for .NET interviews. There are no accounts, no sharing between users and no admin role. All data belongs to one local user. (If multi-user is wanted later, every entity below gets a `UserId`; see open questions.)
 - **Scope of content:** interview questions with a reference answer. Not a general learning platform or a coding-challenge judge.
-- **Persistence:** R2 and R4 need data that survives restarts (review history, study plan). The current `InMemoryQuestionRepository` is not sufficient, so a real database is a prerequisite for R2 onwards. Recommended: SQLite via EF Core (zero setup, one file), behind the existing repository-style interfaces.
+- **Persistence:** R2 and R4 need data that survives restarts (review history, study plan). The current `InMemoryQuestionRepository` is not sufficient, so a real database is a prerequisite for R2 onwards. Decided: PostgreSQL via EF Core (Npgsql), run locally through Docker Compose.
 - **Terminology:** a *question* is the content (text, reference answer, topic, difficulty). A *card* is a user's learning state for one question (see R2). One question has at most one card.
 
 ---
@@ -58,22 +58,37 @@ The user can study questions as flashcards, and the app schedules each card for 
 - **Self-rating scale (4 buttons):** `Again`, `Hard`, `Good`, `Easy`. Each button shows the interval it would produce (e.g. "Good · 6 d").
 - **Algorithm:** SM-2 for the first version. It is simple, well documented and easy to test. It must sit behind an interface (`IScheduler`) so it can be replaced with FSRS later without touching the endpoints.
   - New card: `ease = 2.5`, `interval = 0`, `repetitions = 0`, due immediately.
-  - `Again` resets `repetitions` and puts the card back in the same session (re-queued after a few other cards).
+  - `Again` resets `repetitions` and sets `dueAt` to now (`intervalDays = 0`), so the card is due immediately. In the session it is re-queued after a few other cards; if the user leaves, it is first in line next time.
   - `Hard` / `Good` / `Easy` grow the interval; `ease` is adjusted and never drops below 1.3.
-- **Card state per question:** `ease`, `intervalDays`, `repetitions`, `dueAt`, `lastReviewedAt`, `lapses`. Every rating is also stored as an immutable **review log** entry (`cardId`, `ratedAt`, `rating`, `source`: `self` or `ai`). The log feeds R4.
+- **Card state per question:** `ease`, `intervalDays`, `repetitions`, `dueAt`, `lastReviewedAt`, `lapses`. Every rating is also stored as a **review log** entry (`reviewId`, `cardId`, `ratedAt`, `rating`, `source`: `self` or `ai`, plus a snapshot of the card state before the rating so Undo can restore it). Entries are never edited; the only way to remove one is Undo. The log feeds R4, so it only contains ratings the user stands by.
 - **Study session:** the queue is "due cards" first (oldest due first), then new cards. Daily limits, both configurable: **20 new cards/day**, **200 reviews/day**. Cards can be restricted to chosen topics for a session.
-- **Cards are created lazily:** a question becomes a card the first time it is introduced as a new card in a session. Questions are not duplicated.
+- **Cards are created lazily:** a question becomes a card when its first rating is recorded. The review request identifies the question (`questionId`), not a card; the server finds the card for that question or creates it in the same transaction as the first review. The queue is a pure read with no side effects, so abandoning a session creates no cards and does not use up the daily new-card limit. Questions are not duplicated.
+- **Idempotent reviews:** the client generates a `reviewId` (GUID) when a card is shown and sends it with the rating. The review log has a unique index on it; a repeated request with the same `reviewId` (double click, network retry) returns the original result and does not reschedule the card. The UI also disables the rating buttons after the first tap.
 - **Time handling:** "day" boundaries use the user's local time zone (the browser sends its IANA zone). The scheduler takes a `TimeProvider` so tests control the clock.
-- **Undo:** the last rating in a session can be undone (restores card state, deletes the log entry).
+- **Undo:** the last rating in a session can be undone: the card state is restored from the snapshot in the log entry and the entry is deleted.
 - **Suspend:** a card can be suspended (excluded from sessions) without losing its history.
+
+#### Study page (`/study`)
+
+- **Setup screen first.** Opening `/study` shows a setup screen, not a card. It lists the four topics with their **due** and **new** counts (respecting the daily limits), lets the user choose one or more topics (default: all), and has a **Start** button. The chosen topics go in the URL (`/study/session?topic=Sql&topic=CSharp`) so a reload resumes the same selection. Start is disabled when nothing is due or new for the selection ("Nothing due", with the next due time).
+- **Card stack.** The session shows one card at a time with the next card peeking behind it.
+  - Front = question text. **Tapping the card flips it** to the reference answer (markdown, with code blocks).
+  - The **rating buttons** (`Again`, `Hard`, `Good`, `Easy`, each showing its resulting interval) are **below the answer, reached by scrolling down**. They do not exist until the card is flipped, so the user must recall first.
+  - Rating sends the card off screen and brings in the next one. An **Undo** control restores the previous card.
+  - Keyboard: Space = flip, 1–4 = rate. No swipe-to-rate in the first version.
+  - Animations (flip, card leaving) are plain CSS.
+- **Naming:** the rating is called **Rating** in code and UI; it is not the question's **Difficulty** (Junior / Middle / Senior). See [GLOSSARY.md](../GLOSSARY.md).
 
 ### Acceptance criteria
 
-- `GET /api/study/queue?topic=&limit=` returns the cards due now, then new cards, respecting the daily limits.
-- `POST /api/study/reviews` with `{ cardId, rating }` updates the card state, writes a log entry and returns the new `dueAt` and `intervalDays`.
-- Unit tests cover the scheduler with a fake clock: a first `Good` yields 1 day, a second `Good` yields 6 days, `Again` resets repetitions, ease never drops below 1.3.
-- The UI flow works end to end: show front → reveal back → rate → next card; an empty queue shows "Nothing due" with the next due time.
-- Rating a card twice in rapid succession (double click) records one review.
+- `GET /api/study/summary` returns, per topic, the number of due cards and the number of new cards available today (respecting the daily limits). It feeds the setup screen.
+- `GET /api/study/queue?topic=&limit=` (`topic` may be repeated) returns the cards due now, then new cards, respecting the daily limits. Each item identifies its question by `questionId` (and includes `cardId` when the card exists). The request creates no cards.
+- `POST /api/study/reviews` with `{ questionId, rating, reviewId }` creates the card if needed, updates the card state, writes a log entry and returns the new `dueAt` and `intervalDays`. An unknown `questionId` or `rating` returns a validation problem (HTTP 400).
+- `DELETE /api/study/reviews/{reviewId}` undoes that review: the card state is restored and the log entry is deleted.
+- Unit tests cover the scheduler with a fake clock: a first `Good` yields 1 day, a second `Good` yields 6 days, `Again` resets repetitions and is due immediately, ease never drops below 1.3.
+- The UI flow works end to end: setup screen (counts, topic choice) → Start → show front → tap to flip → scroll to the ratings → rate → next card; an empty queue shows "Nothing due" with the next due time.
+- Rating a card twice in rapid succession (double click) records one review: the second request with the same `reviewId` returns the first result.
+- Opening the queue and leaving without rating creates no cards and does not change the summary counts.
 
 ---
 
@@ -203,7 +218,7 @@ All derived from card state and the review log; nothing is entered by hand.
 
 ## Suggested delivery order
 
-1. **Foundation:** database (SQLite + EF Core), Topic enum and filters (R1).
+1. **Foundation:** database (PostgreSQL + EF Core), Topic enum and filters (R1).
 2. **Flashcards + SM-2** with review log (R2). This is the core loop and the data source for R4.
 3. **Study plan + progress dashboard** (R4).
 4. **AI** (R3): answer checking first (highest value, feeds R2), then explanations, then question generation.
@@ -217,7 +232,7 @@ These were not specified. The document assumes the default shown; change the def
 | # | Question | Assumed default |
 |---|----------|-----------------|
 | 1 | Is this single-user forever, or will others use it (accounts, hosting)? | Single user, local |
-| 2 | Which database? | SQLite via EF Core |
+| 2 | Which database? | PostgreSQL via EF Core (replaced the initial SQLite choice) |
 | 3 | Which AI provider and model? | Anthropic Claude API |
 | 4 | SM-2 or FSRS? | SM-2 behind `IScheduler`; FSRS later |
 | 5 | Should AI-checked answers count as reviews automatically, or only after the user confirms the rating? | Only after the user confirms |

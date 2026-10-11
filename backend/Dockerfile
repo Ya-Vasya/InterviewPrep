@@ -14,12 +14,8 @@ RUN dotnet publish src/InterviewPrep.Api/InterviewPrep.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# SQLite database lives in /data; mount a volume there to keep it across containers.
-RUN mkdir /data && chown "$APP_UID" /data
-VOLUME /data
-
-ENV ASPNETCORE_URLS=http://+:8080 \
-    ConnectionStrings__Default="Data Source=/data/interviewprep.db"
+# The PostgreSQL connection string is supplied at run time via ConnectionStrings__Default.
+ENV ASPNETCORE_URLS=http://+:8080
 
 COPY --from=build /app/publish .
 

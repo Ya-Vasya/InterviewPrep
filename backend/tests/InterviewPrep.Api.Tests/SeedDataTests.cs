@@ -1,6 +1,7 @@
 using System.Text.Json;
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Questions;
+using InterviewPrep.Api.Features.Study;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -99,12 +100,13 @@ public class SeedDataTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Reseeding_ReplacesLegacySeedRowsThatHaveARandomId()
+    public async Task Reseeding_MovesLegacySeedRowsToTheStableId_KeepingTheirCard()
     {
         var seedId = SeedFileIds()[0];
         var legacyId = Guid.NewGuid();
-        await WithDb(async db =>
+        var cardId = await WithDb(async db =>
         {
+            // Recreate a database seeded before ids were stable: a random-id question that already has a card.
             var seeded = await db.Questions.SingleAsync(q => q.Id == seedId);
             await db.Questions.Where(q => q.Id == seedId).ExecuteDeleteAsync();
             db.Questions.Add(new Question
@@ -112,8 +114,10 @@ public class SeedDataTests(ApiFactory factory) : IClassFixture<ApiFactory>
                 Id = legacyId, Topic = seeded.Topic, Difficulty = seeded.Difficulty, Text = seeded.Text,
                 Answer = seeded.Answer, Tags = seeded.Tags, Source = QuestionSource.Seed
             });
+            var card = new Card { QuestionId = legacyId, CreatedAt = DateTime.UtcNow, Ease = 2.5, DueAt = DateTime.UtcNow };
+            db.Cards.Add(card);
             await db.SaveChangesAsync();
-            return 0;
+            return card.Id;
         });
 
         await Reseed();
@@ -122,6 +126,10 @@ public class SeedDataTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Contains(seedId, ids);
         Assert.DoesNotContain(legacyId, ids);
         Assert.Equal(SeedFileIds().Length, ids.Count);
+        var cardQuestionId = await WithDb(db => db.Cards.Where(c => c.Id == cardId).Select(c => c.QuestionId).SingleAsync());
+        Assert.Equal(seedId, cardQuestionId);
+
+        await WithDb(db => db.Cards.Where(c => c.Id == cardId).ExecuteDeleteAsync());
     }
 
     [Fact]

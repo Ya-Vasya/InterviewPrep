@@ -15,7 +15,7 @@ InterviewPrep/
 - AI that generates new questions, checks your answers and explains mistakes
 - Progress tracker based on your study plan
 
-Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Today only a small part of the first item exists (browsing seed questions by topic).
+Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Implemented so far: browsing seed questions by topic, and the flashcard study loop (spaced repetition with a review log and Undo).
 
 ## Documentation
 
@@ -28,8 +28,15 @@ Details, acceptance criteria and open questions: [docs/requirements.md](docs/req
 
 - .NET 10 SDK — `dotnet --version`
 - Node.js 20+ — `node -v`
+- Docker — runs the PostgreSQL database (and is required by the backend tests)
 
 ## Run
+
+Database (PostgreSQL on localhost:5432, data kept in the `pg-data` volume):
+
+```bash
+docker compose up -d db
+```
 
 Backend (http://localhost:5080):
 
@@ -64,7 +71,14 @@ dotnet test
 | GET    | `/api/questions`       | Questions; optional `topic`, `difficulty`, `tag` filters (AND) |
 | GET    | `/api/questions/{id}`  | One question                       |
 | POST   | `/api/questions`       | Add a question                     |
+| GET    | `/api/study/summary`   | Due and new card counts per topic (`tz` = IANA time zone) |
+| GET    | `/api/study/queue`     | Cards to study now: due first, then new; repeatable `topic` |
+| POST   | `/api/study/reviews`   | Record a rating `{ questionId, rating, reviewId }`; idempotent by `reviewId` |
+| DELETE | `/api/study/reviews/{reviewId}` | Undo a card's latest review |
+| POST   | `/api/study/cards/{id}/suspend` (or `unsuspend`) | Exclude a card from sessions |
 
 OpenAPI document (Development only): http://localhost:5080/openapi/v1.json
 
-Data is stored in SQLite (`ConnectionStrings:Default`, default `backend/src/InterviewPrep.Api/interviewprep.db`). Migrations are applied and seed questions loaded on startup. Delete the file to reset.
+Data is stored in PostgreSQL (`ConnectionStrings:Default`, default `Host=localhost;Port=5432;Database=interviewprep;Username=postgres;Password=postgres`, matching the `db` service in `docker-compose.yml`). Migrations are applied and seed questions loaded on startup. Run `docker compose down -v` to wipe the data.
+
+The backend tests start a throwaway PostgreSQL container with Testcontainers, so Docker must be running; they do not touch the dev database.

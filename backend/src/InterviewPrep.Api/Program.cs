@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Questions;
+using InterviewPrep.Api.Features.Study;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddPersistence();
+builder.Services.AddStudyFeature();
 
 const string FrontendCors = "Frontend";
 builder.Services.AddCors(options =>
@@ -37,6 +39,7 @@ app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }))
    .WithName("Health");
 
 app.MapQuestionEndpoints();
+app.MapStudyEndpoints();
 
 app.Run();
 

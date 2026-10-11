@@ -26,9 +26,9 @@ public static class DatabaseInitializer
     }
 
     /// <summary>
-    /// Makes the <c>Seed</c> rows match the seed file. Every seed entry has a stable <c>id</c> (cards and other
-    /// data reference questions by it), so this inserts entries that are missing, refreshes the content of
-    /// existing ones and never duplicates. Seed rows that are no longer in the file are left alone.
+    /// Makes the <c>Seed</c> rows match the seed file. Every seed entry has a stable <c>id</c> (cards reference
+    /// questions by it), so this inserts entries that are missing, refreshes the content of existing ones and
+    /// never duplicates. Seed rows that are no longer in the file are left alone.
     /// </summary>
     internal static async Task SeedQuestionsAsync(AppDbContext db, string? seedPath, CancellationToken ct)
     {
@@ -42,15 +42,26 @@ public static class DatabaseInitializer
         var existing = await db.Questions.AsTracking()
             .Where(q => q.Source == QuestionSource.Seed)
             .ToListAsync(ct);
+        var existingById = existing.ToDictionary(q => q.Id);
 
-        // Databases created before seed ids were stable hold seed rows with random ids. Replace them (matched
-        // by text) so those databases converge instead of ending up with every question twice.
+        // Databases created before seed ids were stable hold seed rows with random ids. Match them to the seed
+        // entry with the same text so they can be moved over to the stable id (below).
         var seedIds = seeds.Select(s => s.Id).ToHashSet();
-        var seedTexts = seeds.Select(s => s.Text).ToHashSet();
-        var legacy = existing.Where(q => !seedIds.Contains(q.Id) && seedTexts.Contains(q.Text)).ToList();
-        db.Questions.RemoveRange(legacy);
+        var seedByText = seeds.GroupBy(s => s.Text).ToDictionary(g => g.Key, g => g.First());
+        var claimed = new HashSet<Guid>();
+        var legacy = new List<(Guid OldId, Guid NewId)>();
+        foreach (var q in existing)
+        {
+            if (!seedIds.Contains(q.Id) &&
+                seedByText.TryGetValue(q.Text, out var match) &&
+                !existingById.ContainsKey(match.Id) &&
+                claimed.Add(match.Id))
+            {
+                legacy.Add((q.Id, match.Id));
+            }
+        }
 
-        var existingById = existing.Except(legacy).ToDictionary(q => q.Id);
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         foreach (var seed in seeds)
         {
@@ -80,6 +91,17 @@ public static class DatabaseInitializer
         }
 
         await db.SaveChangesAsync(ct);
+
+        // Move each legacy question's card (and with it the review history) to the stable id, then drop the old
+        // row. Deleting it first would cascade to the card and its reviews.
+        foreach (var (oldId, newId) in legacy)
+        {
+            await db.Cards.Where(c => c.QuestionId == oldId)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.QuestionId, newId), ct);
+            await db.Questions.Where(q => q.Id == oldId).ExecuteDeleteAsync(ct);
+        }
+
+        await transaction.CommitAsync(ct);
     }
 
     private static void EnsureValidIds(List<SeedQuestion> seeds)

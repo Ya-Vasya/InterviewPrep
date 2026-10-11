@@ -2,7 +2,7 @@
 
 Target structure for `frontend/src`. See the [overview](overview.md) for principles and order of work.
 
-Status: **proposed**. Today everything is in `App.tsx` and `api/client.ts`, with `useEffect` fetching and local `loading`/`error` state.
+Status: **partly implemented**. React Router, TanStack Query, the shared `<Markdown>` component and `features/questions` + `features/study` exist, plus Vitest + Testing Library. Not yet done: the split of `api/client.ts` into `http.ts`/`types.ts`/per-feature modules (everything is still in `client.ts`), ESLint, the dashboard/plan/AI features, and URL-persisted question filters (R1). The structure below is still the target.
 
 ## Structure
 
@@ -32,7 +32,7 @@ Feature folders mirror the backend features (`Features/Study` ↔ `features/stud
 | Area | Decision | Why |
 |------|----------|-----|
 | Server state | **TanStack Query** | Replaces hand-written `useEffect` + loading/error state; gives caching, invalidation (rate a card, then refetch queue and progress) and cancellation. Biggest single improvement. |
-| Routing | **React Router**: `/questions`, `/study`, `/dashboard`, `/plan` | Needed once there is more than one screen. |
+| Routing | **React Router**: `/questions`, `/study` (setup screen), `/study/session`, `/dashboard`, `/plan` | Needed once there is more than one screen. |
 | Filter persistence | Store topic/difficulty in the **URL query string** (`?topic=SQL&difficulty=Senior`) | Satisfies "selection survives a reload" (R1) and gives shareable links without `localStorage`. |
 | Local state | `useState` / `useReducer` only. No Redux or Zustand. | The study session's queue and reveal state is a `useReducer` inside `StudySession`; everything else is server state in Query. |
 | Types | Hand-written in `api/types.ts` for now. | Once there are ~15+ DTOs, generate them from `/openapi/v1.json` (`openapi-typescript`) to remove the "update both sides" risk. |

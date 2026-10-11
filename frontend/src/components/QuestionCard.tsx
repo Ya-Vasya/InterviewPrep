@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Question } from '../api/client'
+import { Markdown } from './Markdown'
 
 export function QuestionCard({ question, topicName }: { question: Question; topicName: string }) {
   const [showAnswer, setShowAnswer] = useState(false)
@@ -12,7 +13,7 @@ export function QuestionCard({ question, topicName }: { question: Question; topi
       </header>
       <p className="question">{question.text}</p>
       {showAnswer ? (
-        <p className="answer">{question.answer}</p>
+        <Markdown>{question.answer}</Markdown>
       ) : (
         <button type="button" onClick={() => setShowAnswer(true)}>
           Show answer
