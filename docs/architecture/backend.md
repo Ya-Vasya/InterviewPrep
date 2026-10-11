@@ -2,7 +2,7 @@
 
 Target structure for `backend/src/InterviewPrep.Api`. See the [overview](overview.md) for principles and order of work.
 
-Status: **partly implemented**. `Common/`, `Data/` (SQLite, migrations, seed) and `Features/Questions/` exist and the repository was dropped. `Study`, `Ai`, `Plan` and `Progress` are not built yet.
+Status: **partly implemented**. `Common/`, `Data/` (SQLite, migrations, seed), `Features/Questions/` and `Features/Study/` (with `Scheduling/`) exist and the repository was dropped. `Ai`, `Plan` and `Progress` are not built yet. Differences from the sketch below: `Study` has no separate `StudyQueueBuilder` (the queue logic is inline in `StudyEndpoints`), and the review endpoint is idempotent through the unique `ReviewLog.ReviewId` index rather than a `RowVersion` on `Card`.
 
 ## Approach
 

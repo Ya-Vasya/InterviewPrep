@@ -15,7 +15,7 @@ InterviewPrep/
 - AI that generates new questions, checks your answers and explains mistakes
 - Progress tracker based on your study plan
 
-Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Today only a small part of the first item exists (browsing seed questions by topic).
+Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Implemented so far: browsing seed questions by topic, and the flashcard study loop (spaced repetition with a review log and Undo).
 
 ## Documentation
 

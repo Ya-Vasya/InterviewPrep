@@ -2,7 +2,7 @@
 
 Target architecture for Interview Prep. It describes where the code is **going**, to support the features in [requirements.md](../requirements.md). What exists today is described in [CLAUDE.md](../../CLAUDE.md) and [README.md](../../README.md).
 
-Status: **proposed**, not yet implemented.
+Status: **partly implemented** (R1 backend and R2 are built; see the Status line in each linked document).
 
 - [Backend architecture](backend.md)
 - [Frontend architecture](frontend.md)

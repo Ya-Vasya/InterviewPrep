@@ -11,9 +11,9 @@ Interview Prep: a web app for preparing for .NET developer interviews. Two indep
 
 Requires the .NET 10 SDK and Node.js 20+.
 
-Product requirements (topics, flashcards + spaced repetition, AI features, study-plan progress tracker) live in `docs/requirements.md`. Read it before building any of those features; it describes planned behavior of which only the R1 backend (topics, filters, tags, SQLite) is implemented, so the Architecture section below remains the description of what exists.
+Product requirements (topics, flashcards + spaced repetition, AI features, study-plan progress tracker) live in `docs/requirements.md`. Read it before building any of those features; it describes planned behavior of which the R1 backend (topics, filters, tags, SQLite) and R2 (flashcards, spaced repetition, the `/study` pages) are implemented, so the Architecture section below remains the description of what exists. Domain vocabulary (Question vs Card, Rating vs Difficulty, Due, Review) is defined in `GLOSSARY.md`; use those terms in code and UI.
 
-The proposed target architecture (feature folders, EF Core + SQLite, TanStack Query, routing) is in `docs/architecture/overview.md`, with details in `docs/architecture/backend.md` and `docs/architecture/frontend.md`. The backend already follows it (`Features/`, `Data/`, `Common/`); the frontend does not yet. Follow it when adding features, routing or new feature folders.
+The proposed target architecture (feature folders, EF Core + SQLite, TanStack Query, routing) is in `docs/architecture/overview.md`, with details in `docs/architecture/backend.md` and `docs/architecture/frontend.md`. The backend follows it (`Features/`, `Data/`, `Common/`) and the frontend follows it from routing and TanStack Query onwards (`app/`, `features/`, `components/`). Follow it when adding features, routing or new feature folders.
 
 ## Commands
 
@@ -30,7 +30,8 @@ Frontend (run from `frontend/`):
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm run build    # tsc -b && vite build (this is the only type-check; there is no lint or test script)
+npm run build    # tsc -b && vite build (also type-checks the tests; there is no lint script)
+npm test         # vitest run (jsdom + Testing Library)
 ```
 
 OpenAPI document is served only in Development at `http://localhost:5080/openapi/v1.json`. `src/InterviewPrep.Api/InterviewPrep.Api.http` has sample requests.
@@ -57,14 +58,20 @@ docker build -t interviewprep-web frontend
 
 ## Architecture
 
-**Backend** (`backend/src/InterviewPrep.Api`): vertical slices, no controllers. `Program.cs` is composition only: `AddPersistence()`, `InitializeDatabaseAsync()` (applies migrations, then seeds), and `MapQuestionEndpoints()`.
+**Backend** (`backend/src/InterviewPrep.Api`): vertical slices, no controllers. `Program.cs` is composition only: `AddPersistence()`, `AddStudyFeature()`, `InitializeDatabaseAsync()` (applies migrations, then seeds), `MapQuestionEndpoints()` and `MapStudyEndpoints()`.
 
 - `Common/` — `Topic` (`CSharp`, `AspNetCore`, `Sql`, `SystemDesign`) and `Difficulty` enums, plus `EnumParsing`. `Topic.DisplayName()` gives the UI name ("C#"). Enum values are persisted as integers; do not renumber.
 - `Data/` — `AppDbContext` (SQLite, no-tracking by default), `Configurations/` (`IEntityTypeConfiguration<T>` per entity), `Migrations/`, `SeedData/questions.json` (loaded once, when no `Source = Seed` rows exist), `DatabaseInitializer`.
 - `Features/Questions/` — `Question` entity (never serialized), DTOs (`QuestionResponse`, `CreateQuestionRequest`, `TopicSummary`), and the `/api` endpoint group with inline handlers and hand-written validation (`Results.ValidationProblem`). There is no repository: handlers use `AppDbContext` directly.
+- `Features/Study/` (R2) — `Card` (a user's learning state for one question, unique per question, created lazily with its first rating), `ReviewLog` (append-only; unique `ReviewId` is the idempotency key, plus a `Before` snapshot of the card state for Undo), `Rating` (`Again`/`Hard`/`Good`/`Easy`, not the question's `Difficulty`), `StudyOptions` (`Study:NewCardsPerDay` 20, `Study:ReviewsPerDay` 200), `StudyDay` (day start in the browser's IANA time zone, sent as `tz`), and `StudyEndpoints` under `/api/study`: `GET summary`, `GET queue` (a pure read, creates no cards), `POST reviews`, `DELETE reviews/{reviewId}` (Undo; only a card's latest review; undoing a card's first review deletes the card), `POST cards/{id}/suspend|unsuspend`. `Scheduling/` holds `IScheduler` and `Sm2Scheduler(TimeProvider)`, pure with no EF. Timestamps are UTC `DateTime` (not `DateTimeOffset`, which SQLite cannot order or compare in SQL) with `UtcDateTimeConverter`. A review that created its card counts against the new-card limit, any other review against the review limit.
 - Enums are serialized as strings via a `JsonStringEnumConverter` registered in `Program.cs`. Request bodies and query filters take topic/difficulty as strings and parse them with `EnumParsing.TryParseName` so unknown values return a validation problem (400). Tests must register the same converter on their `JsonSerializerOptions`, and the frontend `Topic`/`Difficulty` types are the matching string unions.
 - Tags are free-form, stored lowercase as a JSON array (EF primitive collection); the `tag` filter is case-insensitive. Questions created through the API have `Source = Manual`.
 - CORS allowed origins come from the `Cors:AllowedOrigins` config section. In dev the browser never needs CORS because Vite proxies instead.
-- `public partial class Program { }` at the bottom of `Program.cs` exists so tests can use `WebApplicationFactory<Program>`. Tests are end-to-end over HTTP against the real app. Use `ApiFactory` as the class fixture: each test class gets its own in-memory SQLite database (seeded), so tests in different classes cannot affect each other; within a class they share it.
+- `public partial class Program { }` at the bottom of `Program.cs` exists so tests can use `WebApplicationFactory<Program>`. Tests are end-to-end over HTTP against the real app. Use `ApiFactory` as the class fixture: each test class gets its own in-memory SQLite database (seeded), so tests in different classes cannot affect each other; within a class they share it. The app runs on a `FakeClock` (`factory.Clock`); study tests derive from `StudyTestBase`, which wipes cards and reviews and rewinds the clock before each test. To change options (daily limits), subclass `ApiFactory` and override `Settings` (see `StudyLimitTests.cs`). `Sm2SchedulerTests` are plain unit tests.
 
-**Frontend** (`frontend/src`): `api/client.ts` is the only place that calls the backend, using relative `/api/...` paths. `vite.config.ts` proxies `/api` to `http://localhost:5080`, so the backend must be running for the UI to show data. The `Question`, `Topic`, `TopicSummary` and `Difficulty` types in `client.ts` are hand-maintained mirrors of the C# DTOs in `backend/.../Features/Questions/`; update both sides together. The client currently only exposes the GET endpoints (no create).
+**Frontend** (`frontend/src`): `api/client.ts` is the only place that calls the backend, using relative `/api/...` paths. `vite.config.ts` proxies `/api` to `http://localhost:5080`, so the backend must be running for the UI to show data. The `Question`, `Topic`, `TopicSummary`, `Difficulty` and study types (`Rating`, `StudySummary`, `StudyQueueItem`, `ReviewResult`, ...) in `client.ts` are hand-maintained mirrors of the C# DTOs in `backend/.../Features/Questions/` and `Features/Study/`; update both sides together. The client has no create-question call.
+
+- `main.tsx` provides TanStack Query and React Router (`app/router.tsx`, `app/Layout.tsx` nav shell). Routes: `/questions`, `/study` (setup screen: topic choice with due/new counts), `/study/session?topic=...` (the card session; the topic selection lives in the URL), `/` redirects to `/study`.
+- `features/study/`: `StudySession` is a `useReducer` over the pure `sessionReducer` (deck, flip, rate, Again re-queue 3 cards later, Undo, failed-save rollback). The queue is fetched once per session and never refetched mid-session. A `reviewId` GUID is generated per showing of a card (`newGuid` works on plain http, where `crypto.randomUUID` does not exist). Rating buttons are not rendered until the card is flipped. `useStudyShortcuts`: Space = flip, 1-4 = rate. Animations are plain CSS in `study.css`; no swipe gestures.
+- `components/Markdown.tsx` is the one place that renders answers (react-markdown + rehype-highlight; token colors are CSS variables in `index.css`).
+- Tests: Vitest + Testing Library next to the code (`*.test.ts(x)`), mocking `api` from `api/client`.

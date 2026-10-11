@@ -7,7 +7,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 | # | Requirement | Status |
 |---|-------------|--------|
 | R1 | Questions by topic | 🟡 (backend done; UI selector and persisted selection pending) |
-| R2 | Flashcards and spaced repetition | ⬜ |
+| R2 | Flashcards and spaced repetition | ✅ (suspend is API-only; there is no suspend button in the UI yet) |
 | R3 | AI: generate questions, check answers, explain mistakes | ⬜ |
 | R4 | Progress tracker based on a study plan | ⬜ |
 
