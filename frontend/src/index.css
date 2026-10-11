@@ -24,7 +24,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 
-.container { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+.container { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
 h1 { margin: 0 0 24px; }
 
 .filter { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; color: var(--muted); }
@@ -38,9 +38,56 @@ button { cursor: pointer; border-color: var(--accent); color: var(--accent); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
 .card-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
 .question { font-weight: 600; margin: 12px 0; }
-.answer { margin: 0; color: var(--muted); line-height: 1.5; }
 .level { font-weight: 600; }
 .level-junior { color: #2e8b57; }
 .level-middle { color: #c48a00; }
 .level-senior { color: #c0392b; }
 .error { color: #c0392b; }
+
+/* App shell */
+.app-header { border-bottom: 1px solid var(--border); background: var(--surface); }
+.app-header-inner {
+  max-width: 760px; margin: 0 auto; padding: 12px 16px;
+  display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between;
+}
+.brand { font-weight: 700; }
+.app-header nav { display: flex; gap: 4px; }
+.app-header nav a {
+  padding: 6px 12px; border-radius: 6px; color: var(--muted); text-decoration: none; font-weight: 600;
+}
+.app-header nav a.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+a { color: var(--accent); }
+
+/* Markdown answers */
+.markdown { line-height: 1.55; overflow-wrap: anywhere; color: var(--text); }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown code { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.9em; }
+.markdown :not(pre) > code {
+  background: color-mix(in srgb, var(--muted) 18%, transparent); padding: 1px 5px; border-radius: 4px;
+}
+.markdown pre {
+  margin: 12px 0; padding: 12px 14px; overflow-x: auto; border-radius: 8px;
+  background: color-mix(in srgb, var(--muted) 12%, var(--surface)); border: 1px solid var(--border);
+}
+.markdown pre code { font-size: 0.85rem; overflow-wrap: normal; }
+.markdown table { border-collapse: collapse; display: block; overflow-x: auto; }
+.markdown th, .markdown td { border: 1px solid var(--border); padding: 4px 10px; }
+
+/* Syntax highlighting (highlight.js classes from rehype-highlight) */
+:root {
+  --hl-keyword: #8250df; --hl-string: #0a7d3e; --hl-number: #b35900; --hl-comment: #6e7781;
+  --hl-type: #0b6bcb; --hl-meta: #8c5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hl-keyword: #c4a8ff; --hl-string: #7ee2a0; --hl-number: #ffb870; --hl-comment: #8b949e;
+    --hl-type: #79c0ff; --hl-meta: #e3b341;
+  }
+}
+.hljs-keyword, .hljs-built_in, .hljs-literal, .hljs-selector-tag { color: var(--hl-keyword); }
+.hljs-string, .hljs-regexp, .hljs-char { color: var(--hl-string); }
+.hljs-number, .hljs-symbol { color: var(--hl-number); }
+.hljs-comment, .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.hljs-title, .hljs-type, .hljs-params { color: var(--hl-type); }
+.hljs-meta, .hljs-attr, .hljs-attribute { color: var(--hl-meta); }

@@ -58,6 +58,138 @@ namespace InterviewPrep.Api.Data.Migrations
 
                     b.ToTable("Questions");
                 });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Study.Card", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Ease")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("IntervalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Lapses")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Repetitions")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Suspended")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DueAt");
+
+                    b.HasIndex("QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("Cards");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Study.ReviewLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("CardCreated")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ResultDueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ResultIntervalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Before", "InterviewPrep.Api.Features.Study.ReviewLog.Before#CardState", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<DateTime>("DueAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<double>("Ease")
+                                .HasColumnType("double precision");
+
+                            b1.Property<int>("IntervalDays")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("Lapses")
+                                .HasColumnType("integer");
+
+                            b1.Property<DateTime?>("LastReviewedAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int>("Repetitions")
+                                .HasColumnType("integer");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("RatedAt");
+
+                    b.HasIndex("ReviewId")
+                        .IsUnique();
+
+                    b.ToTable("ReviewLogs");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Study.Card", b =>
+                {
+                    b.HasOne("InterviewPrep.Api.Features.Questions.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Study.ReviewLog", b =>
+                {
+                    b.HasOne("InterviewPrep.Api.Features.Study.Card", "Card")
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+                });
 #pragma warning restore 612, 618
         }
     }

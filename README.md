@@ -15,7 +15,7 @@ InterviewPrep/
 - AI that generates new questions, checks your answers and explains mistakes
 - Progress tracker based on your study plan
 
-Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Today only a small part of the first item exists (browsing seed questions by topic).
+Details, acceptance criteria and open questions: [docs/requirements.md](docs/requirements.md). Implemented so far: browsing seed questions by topic, and the flashcard study loop (spaced repetition with a review log and Undo).
 
 ## Documentation
 
@@ -71,6 +71,11 @@ dotnet test
 | GET    | `/api/questions`       | Questions; optional `topic`, `difficulty`, `tag` filters (AND) |
 | GET    | `/api/questions/{id}`  | One question                       |
 | POST   | `/api/questions`       | Add a question                     |
+| GET    | `/api/study/summary`   | Due and new card counts per topic (`tz` = IANA time zone) |
+| GET    | `/api/study/queue`     | Cards to study now: due first, then new; repeatable `topic` |
+| POST   | `/api/study/reviews`   | Record a rating `{ questionId, rating, reviewId }`; idempotent by `reviewId` |
+| DELETE | `/api/study/reviews/{reviewId}` | Undo a card's latest review |
+| POST   | `/api/study/cards/{id}/suspend` (or `unsuspend`) | Exclude a card from sessions |
 
 OpenAPI document (Development only): http://localhost:5080/openapi/v1.json
 

@@ -2,7 +2,7 @@
 
 Target structure for `frontend/src`. See the [overview](overview.md) for principles and order of work.
 
-Status: **proposed**. Today everything is in `App.tsx` and `api/client.ts`, with `useEffect` fetching and local `loading`/`error` state.
+Status: **partly implemented**. React Router, TanStack Query, the shared `<Markdown>` component and `features/questions` + `features/study` exist, plus Vitest + Testing Library. Not yet done: the split of `api/client.ts` into `http.ts`/`types.ts`/per-feature modules (everything is still in `client.ts`), ESLint, the dashboard/plan/AI features, and URL-persisted question filters (R1). The structure below is still the target.
 
 ## Structure
 
