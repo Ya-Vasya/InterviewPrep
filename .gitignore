@@ -17,3 +17,6 @@ dist/
 *.db-shm
 *.db-wal
 .claude/settings.local.json
+
+# Verify snapshot tests
+*.received.*

@@ -85,18 +85,40 @@ export interface ReviewResult {
   nextIntervals: RatingIntervals
 }
 
+/** Shape of the backend's error bodies (RFC 9457 ProblemDetails; `errors` is set for validation failures). */
+interface ProblemDetails {
+  title?: string
+  detail?: string
+  errors?: Record<string, string[]>
+}
+
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
+  status: number
+  /** Field name to messages, present for 400 validation problems. */
+  errors?: Record<string, string[]>
+
+  constructor(status: number, message: string, errors?: Record<string, string[]>) {
     super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.errors = errors
   }
+}
+
+async function toApiError(response: Response): Promise<ApiError> {
+  let problem: ProblemDetails | undefined
+  try {
+    problem = (await response.json()) as ProblemDetails
+  } catch {
+    // Not JSON (for example an nginx error page); fall back to the status line.
+  }
+  const message = problem?.detail ?? problem?.title ?? `${response.status} ${response.statusText}`
+  return new ApiError(response.status, message, problem?.errors)
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init)
-  if (!response.ok) throw new ApiError(response.status, `${response.status} ${response.statusText}`)
+  if (!response.ok) throw await toApiError(response)
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T)
 }
 

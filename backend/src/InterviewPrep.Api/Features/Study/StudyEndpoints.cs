@@ -1,6 +1,7 @@
 using InterviewPrep.Api.Common;
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Questions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -16,14 +17,14 @@ public static class StudyEndpoints
     {
         var group = app.MapGroup("/api/study").WithTags("Study");
 
-        group.MapGet("/summary", GetSummary);
-        group.MapGet("/queue", GetQueue);
-        group.MapPost("/reviews", PostReview);
-        group.MapDelete("/reviews/{reviewId:guid}", UndoReview);
+        group.MapGet("/summary", GetSummary).WithName("GetStudySummary");
+        group.MapGet("/queue", GetQueue).WithName("GetStudyQueue");
+        group.MapPost("/reviews", PostReview).WithName(nameof(PostReview));
+        group.MapDelete("/reviews/{reviewId:guid}", UndoReview).WithName(nameof(UndoReview));
         group.MapPost("/cards/{cardId:guid}/suspend", (Guid cardId, AppDbContext db, CancellationToken ct) =>
-            SetSuspended(cardId, true, db, ct));
+            SetSuspended(cardId, true, db, ct)).WithName("SuspendCard");
         group.MapPost("/cards/{cardId:guid}/unsuspend", (Guid cardId, AppDbContext db, CancellationToken ct) =>
-            SetSuspended(cardId, false, db, ct));
+            SetSuspended(cardId, false, db, ct)).WithName("UnsuspendCard");
 
         return app;
     }
@@ -43,11 +44,11 @@ public static class StudyEndpoints
             Math.Max(0, options.ReviewsPerDay - reviewsToday));
     }
 
-    private static async Task<IResult> GetSummary(
+    private static async Task<Results<Ok<StudySummaryResponse>, ValidationProblem>> GetSummary(
         string? tz, AppDbContext db, TimeProvider time, IOptions<StudyOptions> options, CancellationToken ct)
     {
         if (!StudyDay.TryGetZone(tz, out var zone))
-            return Results.ValidationProblem(new Dictionary<string, string[]> { ["tz"] = ["Unknown time zone."] });
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["tz"] = ["Unknown time zone."] });
 
         var now = time.GetUtcNow().UtcDateTime;
         var allowance = await GetAllowanceAsync(db, options.Value, StudyDay.StartOfDayUtc(now, zone), ct);
@@ -80,11 +81,11 @@ public static class StudyEndpoints
                 nextDueByTopic.TryGetValue(t, out var next) ? next : null))
             .ToList();
 
-        return Results.Ok(new StudySummaryResponse(topics, allowance.NewRemaining, allowance.ReviewsRemaining));
+        return TypedResults.Ok(new StudySummaryResponse(topics, allowance.NewRemaining, allowance.ReviewsRemaining));
     }
 
     /// <summary>A pure read: it never creates cards, so abandoning a session leaves no trace.</summary>
-    private static async Task<IResult> GetQueue(
+    private static async Task<Results<Ok<List<StudyQueueItem>>, ValidationProblem>> GetQueue(
         string[]? topic, int? limit, string? tz,
         AppDbContext db, IScheduler scheduler, TimeProvider time, IOptions<StudyOptions> options,
         CancellationToken ct)
@@ -107,7 +108,7 @@ public static class StudyEndpoints
             errors["tz"] = ["Unknown time zone."];
 
         if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+            return TypedResults.ValidationProblem(errors);
 
         var now = time.GetUtcNow().UtcDateTime;
         var allowance = await GetAllowanceAsync(db, options.Value, StudyDay.StartOfDayUtc(now, zone), ct);
@@ -140,7 +141,7 @@ public static class StudyEndpoints
             .Concat(newQuestions.Select(q => ToItem(q, null, newState, isNew: true, scheduler)))
             .ToList();
 
-        return Results.Ok(items);
+        return TypedResults.Ok(items);
     }
 
     private static StudyQueueItem ToItem(Question q, Guid? cardId, CardState state, bool isNew, IScheduler scheduler) =>
@@ -154,7 +155,7 @@ public static class StudyEndpoints
             scheduler.Review(state, Rating.Good).IntervalDays,
             scheduler.Review(state, Rating.Easy).IntervalDays);
 
-    private static async Task<IResult> PostReview(
+    private static async Task<Results<Ok<ReviewResponse>, ValidationProblem, ProblemHttpResult>> PostReview(
         ReviewRequest request, AppDbContext db, IScheduler scheduler, TimeProvider time, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
@@ -175,7 +176,7 @@ public static class StudyEndpoints
             errors["questionId"] = ["No question with this id exists."];
 
         if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+            return TypedResults.ValidationProblem(errors);
 
         var questionId = request.QuestionId!.Value;
         var reviewId = request.ReviewId!.Value;
@@ -188,10 +189,10 @@ public static class StudyEndpoints
             if (existing is not null)
             {
                 return existing.Card.QuestionId == questionId && existing.Rating == rating
-                    ? Results.Ok(new ReviewResponse(
+                    ? TypedResults.Ok(new ReviewResponse(
                         reviewId, existing.CardId, existing.ResultDueAt, existing.ResultIntervalDays,
                         IntervalsFor(scheduler.Review(existing.Before, existing.Rating), scheduler)))
-                    : Results.Problem(
+                    : TypedResults.Problem(
                         statusCode: StatusCodes.Status409Conflict,
                         title: "Review id already used",
                         detail: "This review id was already recorded for a different question or rating.");
@@ -229,7 +230,7 @@ public static class StudyEndpoints
             {
                 // One SaveChanges is one transaction: the card is created together with its first review.
                 await db.SaveChangesAsync(ct);
-                return Results.Ok(new ReviewResponse(reviewId, card.Id, after.DueAt, after.IntervalDays, IntervalsFor(after, scheduler)));
+                return TypedResults.Ok(new ReviewResponse(reviewId, card.Id, after.DueAt, after.IntervalDays, IntervalsFor(after, scheduler)));
             }
             catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             {
@@ -237,22 +238,22 @@ public static class StudyEndpoints
             }
         }
 
-        return Results.Problem(
+        return TypedResults.Problem(
             statusCode: StatusCodes.Status409Conflict,
             title: "Review conflict",
             detail: "The review could not be recorded because of a concurrent change. Try again.");
     }
 
     /// <summary>Undo: restores the card from the snapshot and deletes the review. Only the card's latest review can be undone.</summary>
-    private static async Task<IResult> UndoReview(Guid reviewId, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, NotFound, ProblemHttpResult>> UndoReview(Guid reviewId, AppDbContext db, CancellationToken ct)
     {
         var log = await db.ReviewLogs.AsTracking().Include(r => r.Card).FirstOrDefaultAsync(r => r.ReviewId == reviewId, ct);
         if (log is null)
-            return Results.NotFound();
+            return TypedResults.NotFound();
 
         if (await db.ReviewLogs.AnyAsync(r => r.CardId == log.CardId && r.Id > log.Id, ct))
         {
-            return Results.Problem(
+            return TypedResults.Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 title: "Review cannot be undone",
                 detail: "Only the latest review of a card can be undone.");
@@ -270,15 +271,15 @@ public static class StudyEndpoints
         }
 
         await db.SaveChangesAsync(ct);
-        return Results.NoContent();
+        return TypedResults.NoContent();
     }
 
-    private static async Task<IResult> SetSuspended(Guid cardId, bool suspended, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, NotFound>> SetSuspended(Guid cardId, bool suspended, AppDbContext db, CancellationToken ct)
     {
         var changed = await db.Cards
             .Where(c => c.Id == cardId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Suspended, suspended), ct);
 
-        return changed == 0 ? Results.NotFound() : Results.NoContent();
+        return changed == 0 ? TypedResults.NotFound() : TypedResults.NoContent();
     }
 }
