@@ -1,5 +1,6 @@
 using InterviewPrep.Api.Common;
 using InterviewPrep.Api.Data;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace InterviewPrep.Api.Features.Questions;
@@ -10,15 +11,15 @@ public static class QuestionEndpoints
     {
         var group = app.MapGroup("/api").WithTags("Questions");
 
-        group.MapGet("/topics", GetTopics);
-        group.MapGet("/questions", GetQuestions);
-        group.MapGet("/questions/{id:guid}", GetQuestion);
-        group.MapPost("/questions", CreateQuestion);
+        group.MapGet("/topics", GetTopics).WithName(nameof(GetTopics));
+        group.MapGet("/questions", GetQuestions).WithName(nameof(GetQuestions));
+        group.MapGet("/questions/{id:guid}", GetQuestion).WithName(nameof(GetQuestion));
+        group.MapPost("/questions", CreateQuestion).WithName(nameof(CreateQuestion));
 
         return app;
     }
 
-    private static async Task<IResult> GetTopics(AppDbContext db, CancellationToken ct)
+    private static async Task<Ok<List<TopicSummary>>> GetTopics(AppDbContext db, CancellationToken ct)
     {
         var counts = await db.Questions
             .GroupBy(q => q.Topic)
@@ -30,10 +31,10 @@ public static class QuestionEndpoints
             .Select(t => new TopicSummary(t, t.DisplayName(), counts.GetValueOrDefault(t)))
             .ToList();
 
-        return Results.Ok(topics);
+        return TypedResults.Ok(topics);
     }
 
-    private static async Task<IResult> GetQuestions(
+    private static async Task<Results<Ok<List<QuestionResponse>>, ValidationProblem>> GetQuestions(
         string? topic, string? difficulty, string? tag, AppDbContext db, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
@@ -56,7 +57,7 @@ public static class QuestionEndpoints
         }
 
         if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+            return TypedResults.ValidationProblem(errors);
 
         if (NormalizeTag(tag) is { Length: > 0 } normalizedTag)
             query = query.Where(q => q.Tags.Contains(normalizedTag));
@@ -65,20 +66,21 @@ public static class QuestionEndpoints
             .OrderBy(q => q.Topic).ThenBy(q => q.Difficulty).ThenBy(q => q.Text)
             .ToListAsync(ct);
 
-        return Results.Ok(questions.Select(q => q.ToResponse()));
+        return TypedResults.Ok(questions.Select(q => q.ToResponse()).ToList());
     }
 
-    private static async Task<IResult> GetQuestion(Guid id, AppDbContext db, CancellationToken ct) =>
+    private static async Task<Results<Ok<QuestionResponse>, NotFound>> GetQuestion(
+        Guid id, AppDbContext db, CancellationToken ct) =>
         await db.Questions.FindAsync([id], ct) is { } question
-            ? Results.Ok(question.ToResponse())
-            : Results.NotFound();
+            ? TypedResults.Ok(question.ToResponse())
+            : TypedResults.NotFound();
 
-    private static async Task<IResult> CreateQuestion(
+    private static async Task<Results<Created<QuestionResponse>, ValidationProblem>> CreateQuestion(
         CreateQuestionRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = Validate(request, out var topic, out var difficulty, out var tags);
         if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+            return TypedResults.ValidationProblem(errors);
 
         var question = new Question
         {
@@ -93,7 +95,7 @@ public static class QuestionEndpoints
         db.Questions.Add(question);
         await db.SaveChangesAsync(ct);
 
-        return Results.Created($"/api/questions/{question.Id}", question.ToResponse());
+        return TypedResults.Created($"/api/questions/{question.Id}", question.ToResponse());
     }
 
     private static Dictionary<string, string[]> Validate(

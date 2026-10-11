@@ -15,7 +15,7 @@ public static class DatabaseInitializer
         Converters = { new JsonStringEnumConverter() }
     };
 
-    /// <summary>Applies pending migrations, then loads the shipped seed questions on first run.</summary>
+    /// <summary>Applies pending migrations, then syncs the shipped seed questions into the database.</summary>
     public static async Task InitializeDatabaseAsync(this WebApplication app, CancellationToken ct = default)
     {
         await using var scope = app.Services.CreateAsyncScope();
@@ -25,30 +25,73 @@ public static class DatabaseInitializer
         await SeedQuestionsAsync(db, app.Environment.ContentRootFileProvider.GetFileInfo(QuestionsSeedFile).PhysicalPath, ct);
     }
 
-    private static async Task SeedQuestionsAsync(AppDbContext db, string? seedPath, CancellationToken ct)
+    /// <summary>
+    /// Makes the <c>Seed</c> rows match the seed file. Every seed entry has a stable <c>id</c> (cards and other
+    /// data reference questions by it), so this inserts entries that are missing, refreshes the content of
+    /// existing ones and never duplicates. Seed rows that are no longer in the file are left alone.
+    /// </summary>
+    internal static async Task SeedQuestionsAsync(AppDbContext db, string? seedPath, CancellationToken ct)
     {
-        if (await db.Questions.AnyAsync(q => q.Source == QuestionSource.Seed, ct))
-            return;
-
         if (seedPath is null || !File.Exists(seedPath))
             throw new FileNotFoundException($"Seed file '{QuestionsSeedFile}' was not found.", seedPath);
 
         await using var stream = File.OpenRead(seedPath);
         var seeds = await JsonSerializer.DeserializeAsync<List<SeedQuestion>>(stream, SeedJson, ct) ?? [];
+        EnsureValidIds(seeds);
 
-        db.Questions.AddRange(seeds.Select(s => new Question
+        var existing = await db.Questions.AsTracking()
+            .Where(q => q.Source == QuestionSource.Seed)
+            .ToListAsync(ct);
+
+        // Databases created before seed ids were stable hold seed rows with random ids. Replace them (matched
+        // by text) so those databases converge instead of ending up with every question twice.
+        var seedIds = seeds.Select(s => s.Id).ToHashSet();
+        var seedTexts = seeds.Select(s => s.Text).ToHashSet();
+        var legacy = existing.Where(q => !seedIds.Contains(q.Id) && seedTexts.Contains(q.Text)).ToList();
+        db.Questions.RemoveRange(legacy);
+
+        var existingById = existing.Except(legacy).ToDictionary(q => q.Id);
+
+        foreach (var seed in seeds)
         {
-            Topic = s.Topic,
-            Difficulty = s.Difficulty,
-            Text = s.Text,
-            Answer = s.Answer,
-            Tags = s.Tags.Select(t => t.Trim().ToLowerInvariant()).Distinct().ToList(),
-            Source = QuestionSource.Seed
-        }));
+            var tags = seed.Tags.Select(t => t.Trim().ToLowerInvariant()).Distinct().ToList();
+
+            if (existingById.TryGetValue(seed.Id, out var question))
+            {
+                question.Topic = seed.Topic;
+                question.Difficulty = seed.Difficulty;
+                question.Text = seed.Text;
+                question.Answer = seed.Answer;
+                question.Tags = tags;
+            }
+            else
+            {
+                db.Questions.Add(new Question
+                {
+                    Id = seed.Id,
+                    Topic = seed.Topic,
+                    Difficulty = seed.Difficulty,
+                    Text = seed.Text,
+                    Answer = seed.Answer,
+                    Tags = tags,
+                    Source = QuestionSource.Seed
+                });
+            }
+        }
 
         await db.SaveChangesAsync(ct);
     }
 
+    private static void EnsureValidIds(List<SeedQuestion> seeds)
+    {
+        if (seeds.Any(s => s.Id == Guid.Empty))
+            throw new InvalidOperationException($"Every entry in '{QuestionsSeedFile}' needs a non-empty \"id\".");
+
+        var duplicate = seeds.GroupBy(s => s.Id).FirstOrDefault(g => g.Count() > 1);
+        if (duplicate is not null)
+            throw new InvalidOperationException($"Duplicate id {duplicate.Key} in '{QuestionsSeedFile}'.");
+    }
+
     private sealed record SeedQuestion(
-        Topic Topic, Difficulty Difficulty, string Text, string Answer, List<string> Tags);
+        Guid Id, Topic Topic, Difficulty Difficulty, string Text, string Answer, List<string> Tags);
 }

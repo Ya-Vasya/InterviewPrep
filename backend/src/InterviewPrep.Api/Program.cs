@@ -30,9 +30,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+app.UseStatusCodePages(); // empty 4xx/5xx responses (404, 405, ...) become ProblemDetails
 app.UseCors(FrontendCors);
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
+app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }))
    .WithName("Health");
 
 app.MapQuestionEndpoints();
