@@ -131,6 +131,9 @@ public class StudyQueueTests(ApiFactory factory) : StudyTestBase(factory), IClas
     [InlineData("?limit=0", "limit")]
     [InlineData("?limit=100000", "limit")]
     [InlineData("?tz=Mars/Olympus", "tz")]
+    [InlineData("?tz=../../etc/passwd", "tz")]
+    [InlineData("?tz=%00", "tz")]
+    [InlineData("?tz=..%5C..%5Cwindows", "tz")]
     public async Task Queue_WithInvalidParameters_ReturnsValidationProblem(string query, string field)
     {
         var response = await Client.GetAsync($"/api/study/queue{query}");

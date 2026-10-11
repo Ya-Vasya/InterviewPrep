@@ -170,6 +170,24 @@ describe('StudySession', () => {
     expect(screen.getByText(/Answer 1/)).toBeInTheDocument()
   })
 
+  it('ignores flip and rating keys while an undo is still being saved', async () => {
+    let finishUndo!: () => void
+    undoReview.mockReturnValue(new Promise<void>((resolve) => (finishUndo = resolve)))
+    const user = renderSession()
+    await user.keyboard(' ')
+    await user.keyboard('4')
+    await waitFor(() => expect(postReview).toHaveBeenCalledTimes(1))
+
+    await user.click(screen.getByRole('button', { name: /Undo/ }))
+    await user.keyboard(' ')
+    await user.keyboard('3')
+    expect(postReview).toHaveBeenCalledTimes(1)
+
+    finishUndo()
+    expect(await screen.findByText('Card 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText(/Answer 1/)).toBeInTheDocument()
+  })
+
   it('Undo is disabled before anything has been rated', () => {
     renderSession()
 

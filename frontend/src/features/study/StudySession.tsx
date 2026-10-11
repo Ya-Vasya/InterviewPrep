@@ -41,7 +41,7 @@ export function StudySession({ items, topics }: Props) {
   const flip = () => dispatch({ type: 'flip' })
 
   const rate = (rating: Rating) => {
-    if (!entry || !state.flipped || ratedReviewIds.current.has(entry.reviewId)) return
+    if (!entry || !state.flipped || undoing || ratedReviewIds.current.has(entry.reviewId)) return
     ratedReviewIds.current.add(entry.reviewId)
     setError(null)
 
@@ -82,7 +82,7 @@ export function StudySession({ items, topics }: Props) {
     }
   }
 
-  useStudyShortcuts({ enabled: !finished, flipped: state.flipped, onFlip: flip, onRate: rate })
+  useStudyShortcuts({ enabled: !finished && !undoing, flipped: state.flipped, onFlip: flip, onRate: rate })
 
   // Let the rated card finish flying off screen, then drop it.
   useEffect(() => {
