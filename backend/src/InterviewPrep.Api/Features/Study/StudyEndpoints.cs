@@ -1,9 +1,9 @@
 using InterviewPrep.Api.Common;
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Questions;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace InterviewPrep.Api.Features.Study;
 
@@ -11,8 +11,7 @@ public static class StudyEndpoints
 {
     private const int DefaultQueueLimit = 50;
     private const int MaxQueueLimit = 500;
-    private const int SqliteConstraintError = 19;
-
+    
     public static IEndpointRouteBuilder MapStudyEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/study").WithTags("Study");
@@ -232,7 +231,7 @@ public static class StudyEndpoints
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(new ReviewResponse(reviewId, card.Id, after.DueAt, after.IntervalDays, IntervalsFor(after, scheduler)));
             }
-            catch (DbUpdateException e) when (e.InnerException is SqliteException { SqliteErrorCode: SqliteConstraintError })
+            catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             {
                 db.ChangeTracker.Clear();
             }

@@ -15,9 +15,5 @@ public sealed class CardConfiguration : IEntityTypeConfiguration<Card>
         // At most one card per question.
         builder.HasIndex(c => c.QuestionId).IsUnique();
         builder.HasIndex(c => c.DueAt);
-
-        builder.Property(c => c.CreatedAt).HasConversion<UtcDateTimeConverter>();
-        builder.Property(c => c.DueAt).HasConversion<UtcDateTimeConverter>();
-        builder.Property(c => c.LastReviewedAt).HasConversion(new UtcDateTimeConverter());
     }
 }

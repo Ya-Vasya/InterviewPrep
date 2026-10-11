@@ -17,13 +17,7 @@ public sealed class ReviewLogConfiguration : IEntityTypeConfiguration<ReviewLog>
         builder.HasIndex(r => r.RatedAt);
         builder.HasIndex(r => r.CardId);
 
-        builder.Property(r => r.RatedAt).HasConversion<UtcDateTimeConverter>();
-        builder.Property(r => r.ResultDueAt).HasConversion<UtcDateTimeConverter>();
-
-        builder.ComplexProperty(r => r.Before, before =>
-        {
-            before.Property(s => s.DueAt).HasConversion<UtcDateTimeConverter>();
-            before.Property(s => s.LastReviewedAt).HasConversion(new UtcDateTimeConverter());
-        });
+        // The card state before the rating is stored as columns of this table.
+        builder.ComplexProperty(r => r.Before);
     }
 }

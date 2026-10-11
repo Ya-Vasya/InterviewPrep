@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,16 +16,16 @@ namespace InterviewPrep.Api.Data.Migrations
                 name: "Cards",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    QuestionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Ease = table.Column<double>(type: "REAL", nullable: false),
-                    IntervalDays = table.Column<int>(type: "INTEGER", nullable: false),
-                    Repetitions = table.Column<int>(type: "INTEGER", nullable: false),
-                    Lapses = table.Column<int>(type: "INTEGER", nullable: false),
-                    DueAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Suspended = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    QuestionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Ease = table.Column<double>(type: "double precision", nullable: false),
+                    IntervalDays = table.Column<int>(type: "integer", nullable: false),
+                    Repetitions = table.Column<int>(type: "integer", nullable: false),
+                    Lapses = table.Column<int>(type: "integer", nullable: false),
+                    DueAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Suspended = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,22 +42,22 @@ namespace InterviewPrep.Api.Data.Migrations
                 name: "ReviewLogs",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    ReviewId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CardId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Rating = table.Column<int>(type: "INTEGER", nullable: false),
-                    Source = table.Column<int>(type: "INTEGER", nullable: false),
-                    CardCreated = table.Column<bool>(type: "INTEGER", nullable: false),
-                    ResultDueAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ResultIntervalDays = table.Column<int>(type: "INTEGER", nullable: false),
-                    Before_DueAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Before_Ease = table.Column<double>(type: "REAL", nullable: false),
-                    Before_IntervalDays = table.Column<int>(type: "INTEGER", nullable: false),
-                    Before_Lapses = table.Column<int>(type: "INTEGER", nullable: false),
-                    Before_LastReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Before_Repetitions = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ReviewId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CardId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Rating = table.Column<int>(type: "integer", nullable: false),
+                    Source = table.Column<int>(type: "integer", nullable: false),
+                    CardCreated = table.Column<bool>(type: "boolean", nullable: false),
+                    ResultDueAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ResultIntervalDays = table.Column<int>(type: "integer", nullable: false),
+                    Before_DueAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Before_Ease = table.Column<double>(type: "double precision", nullable: false),
+                    Before_IntervalDays = table.Column<int>(type: "integer", nullable: false),
+                    Before_Lapses = table.Column<int>(type: "integer", nullable: false),
+                    Before_LastReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Before_Repetitions = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
