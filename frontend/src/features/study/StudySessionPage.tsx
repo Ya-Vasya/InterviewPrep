@@ -1,15 +1,10 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api, TOPICS, type Topic } from '../../api/client'
+import { api } from '../../api/client'
 import './study.css'
 import { StudySession } from './StudySession'
-
-/** Topics from `?topic=` in the URL, so a reload resumes the same selection. No topic means all of them. */
-export function parseTopics(values: string[]): Topic[] {
-  const picked = TOPICS.filter((t) => values.some((v) => v.toLowerCase() === t.toLowerCase()))
-  return picked.length > 0 ? picked : [...TOPICS]
-}
+import { parseTopics } from './topics'
 
 export function StudySessionPage() {
   const [params] = useSearchParams()
