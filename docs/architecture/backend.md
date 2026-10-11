@@ -2,7 +2,7 @@
 
 Target structure for `backend/src/InterviewPrep.Api`. See the [overview](overview.md) for principles and order of work.
 
-Status: **partly implemented**. `Common/`, `Data/` (SQLite, migrations, seed) and `Features/Questions/` exist and the repository was dropped. `Study`, `Ai`, `Plan` and `Progress` are not built yet.
+Status: **partly implemented**. `Common/`, `Data/` (PostgreSQL, migrations, seed) and `Features/Questions/` exist and the repository was dropped. `Study`, `Ai`, `Plan` and `Progress` are not built yet.
 
 ## Approach
 
@@ -13,7 +13,7 @@ src/InterviewPrep.Api/
   Program.cs                  # composition only: AddX() / MapX() calls
   Common/                     # Topic/Difficulty enums, validation helpers, TimeProvider setup
   Data/
-    AppDbContext.cs           # SQLite, EF Core
+    AppDbContext.cs           # PostgreSQL (Npgsql), EF Core
     Configurations/           # IEntityTypeConfiguration<T> per entity
     Migrations/
     SeedData/                 # seed questions as JSON, loaded by a startup seeder
@@ -32,7 +32,7 @@ Each feature exposes `AddXFeature(this IServiceCollection)` and `MapXEndpoints(t
 
 ### Data access
 
-Use `AppDbContext` directly in handlers and **drop `IQuestionRepository`** when moving to EF Core. The repository exists only because the data is in memory. Over EF it hides `Include`, projections and the queue/progress queries. Tests run against real SQLite (in-memory mode) through `WebApplicationFactory`, which is more faithful than mocking a repository.
+Use `AppDbContext` directly in handlers and **drop `IQuestionRepository`** when moving to EF Core. The repository exists only because the data is in memory. Over EF it hides `Include`, projections and the queue/progress queries. Tests run against a real PostgreSQL (Testcontainers) through `WebApplicationFactory`, which is more faithful than mocking a repository.
 
 ### Logic isolated from EF
 
@@ -61,11 +61,11 @@ Keep hand-written validation returning `Results.ValidationProblem`. Extract a sm
 
 ### Concurrency
 
-The double-click requirement (R2) needs an idempotency key or a "reviewed since" check in the review endpoint. A `RowVersion` or `lastReviewedAt` comparison on `Card` is enough for SQLite.
+The double-click requirement (R2) needs an idempotency key or a "reviewed since" check in the review endpoint. A `RowVersion` or `lastReviewedAt` comparison on `Card` is enough for PostgreSQL (or map `xmin` as the concurrency token).
 
 ## Testing
 
-- One `WebApplicationFactory<Program>` fixture, but **each test class gets its own in-memory SQLite database**. This removes the "tests can affect each other" caveat in CLAUDE.md.
+- One `WebApplicationFactory<Program>` fixture, but **each test class gets its own database** inside one shared PostgreSQL Testcontainer. This removes the "tests can affect each other" caveat in CLAUDE.md.
 - Add a `Unit/` folder for scheduler and progress tests (plain unit tests with a fake clock).
 - The AI provider and the clock are always faked; tests never call the real API.
 
