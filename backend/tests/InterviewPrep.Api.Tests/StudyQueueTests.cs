@@ -191,8 +191,7 @@ public class StudyQueueTests(ApiFactory factory) : StudyTestBase(factory), IClas
     public async Task Summary_CountsDueAndNewCardsPerTopic_AndTheNextDueTime()
     {
         var sql = await GetQuestions(Topic.Sql);
-        var all = (await Client.GetFromJsonAsync<List<InterviewPrep.Api.Features.Questions.QuestionResponse>>("/api/questions", Json))!;
-        var sqlTotal = all.Count(q => q.Topic == Topic.Sql);
+        var sqlTotal = sql.Count;
 
         await Rate(sql[0].Id, "Again");                 // due now
         await Rate(sql[1].Id, "Again");                 // due now

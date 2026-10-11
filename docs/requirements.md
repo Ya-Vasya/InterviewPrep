@@ -39,7 +39,7 @@ Questions are organized into four topics: **C#**, **ASP.NET Core**, **SQL**, **S
 ### Acceptance criteria
 
 - `GET /api/topics` returns exactly the four topics, each with a question count.
-- `GET /api/questions` accepts `topic`, `difficulty` and `tag` filters, which combine with AND.
+- `GET /api/questions` accepts `topic`, `difficulty` and `tag` filters, which combine with AND, and `limit` (default 50, max 200) and `offset`. It returns `{ items, total, limit, offset }`, where `total` counts all matches.
 - Creating a question with a topic outside the set returns a validation problem (HTTP 400).
 - The UI has a topic selector and a difficulty filter; the selection survives a page reload.
 - Seed data contains at least 10 questions per topic.

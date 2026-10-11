@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { api, type Topic } from '../../api/client'
 import { QuestionCard } from '../../components/QuestionCard'
 
@@ -7,12 +7,19 @@ export function QuestionsPage() {
   const [topic, setTopic] = useState<Topic | ''>('')
 
   const topics = useQuery({ queryKey: ['topics'], queryFn: api.getTopics })
-  const questions = useQuery({
+  const questions = useInfiniteQuery({
     queryKey: ['questions', topic],
-    queryFn: () => api.getQuestions(topic || undefined),
+    queryFn: ({ pageParam }) => api.getQuestions({ topic: topic || undefined, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => {
+      const next = last.offset + last.items.length
+      return next < last.total ? next : undefined
+    },
   })
 
   const topicList = topics.data ?? []
+  const items = questions.data?.pages.flatMap((p) => p.items) ?? []
+  const total = questions.data?.pages[0]?.total
   const error = topics.error ?? questions.error
 
   return (
@@ -35,10 +42,23 @@ export function QuestionsPage() {
       {questions.isPending && !error && <p>Loading…</p>}
 
       <section className="list">
-        {questions.data?.map((q) => (
+        {items.map((q) => (
           <QuestionCard key={q.id} question={q} topicName={topicList.find((t) => t.topic === q.topic)?.name ?? q.topic} />
         ))}
       </section>
+
+      {total !== undefined && (
+        <footer className="list-footer">
+          <p>
+            Showing {items.length} of {total}
+          </p>
+          {questions.hasNextPage && (
+            <button type="button" onClick={() => questions.fetchNextPage()} disabled={questions.isFetchingNextPage}>
+              {questions.isFetchingNextPage ? 'Loading…' : 'Load more'}
+            </button>
+          )}
+        </footer>
+      )}
     </>
   )
 }

@@ -34,10 +34,11 @@ public static class QuestionEndpoints
         return TypedResults.Ok(topics);
     }
 
-    private static async Task<Results<Ok<List<QuestionResponse>>, ValidationProblem>> GetQuestions(
-        string? topic, string? difficulty, string? tag, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<Ok<PagedResponse<QuestionResponse>>, ValidationProblem>> GetQuestions(
+        string? topic, string? difficulty, string? tag, int? limit, int? offset,
+        AppDbContext db, CancellationToken ct)
     {
-        var errors = new Dictionary<string, string[]>();
+        var errors = new ValidationErrors();
         var query = db.Questions.AsQueryable();
 
         if (topic is not null)
@@ -45,7 +46,7 @@ public static class QuestionEndpoints
             if (EnumParsing.TryParseName<Topic>(topic, out var t))
                 query = query.Where(q => q.Topic == t);
             else
-                errors["topic"] = [$"Topic must be one of: {EnumParsing.AllowedValues<Topic>()}."];
+                errors.AddNotOneOf<Topic>("topic");
         }
 
         if (difficulty is not null)
@@ -53,20 +54,27 @@ public static class QuestionEndpoints
             if (EnumParsing.TryParseName<Difficulty>(difficulty, out var d))
                 query = query.Where(q => q.Difficulty == d);
             else
-                errors["difficulty"] = [$"Difficulty must be one of: {EnumParsing.AllowedValues<Difficulty>()}."];
+                errors.AddNotOneOf<Difficulty>("difficulty");
         }
 
-        if (errors.Count > 0)
-            return TypedResults.ValidationProblem(errors);
+        Paging.TryResolve(limit, offset, errors, out var take, out var skip);
 
-        if (NormalizeTag(tag) is { Length: > 0 } normalizedTag)
+        if (errors.Any)
+            return errors.ToProblem();
+
+        if (QuestionTags.Normalize(tag) is { Length: > 0 } normalizedTag)
             query = query.Where(q => q.Tags.Contains(normalizedTag));
 
+        var total = await query.CountAsync(ct);
+
+        // Id is the final tie-breaker so pages never overlap or skip rows when texts are equal.
         var questions = await query
-            .OrderBy(q => q.Topic).ThenBy(q => q.Difficulty).ThenBy(q => q.Text)
+            .OrderBy(q => q.Topic).ThenBy(q => q.Difficulty).ThenBy(q => q.Text).ThenBy(q => q.Id)
+            .Skip(skip).Take(take)
             .ToListAsync(ct);
 
-        return TypedResults.Ok(questions.Select(q => q.ToResponse()).ToList());
+        return TypedResults.Ok(new PagedResponse<QuestionResponse>(
+            questions.Select(q => q.ToResponse()).ToList(), total, take, skip));
     }
 
     private static async Task<Results<Ok<QuestionResponse>, NotFound>> GetQuestion(
@@ -78,17 +86,17 @@ public static class QuestionEndpoints
     private static async Task<Results<Created<QuestionResponse>, ValidationProblem>> CreateQuestion(
         CreateQuestionRequest request, AppDbContext db, CancellationToken ct)
     {
-        var errors = Validate(request, out var topic, out var difficulty, out var tags);
-        if (errors.Count > 0)
-            return TypedResults.ValidationProblem(errors);
+        var errors = new ValidationErrors();
+        if (QuestionValidator.Validate(request, errors) is not { } valid)
+            return errors.ToProblem();
 
         var question = new Question
         {
-            Topic = topic,
-            Difficulty = difficulty,
-            Text = request.Text!.Trim(),
-            Answer = request.Answer!.Trim(),
-            Tags = tags,
+            Topic = valid.Topic,
+            Difficulty = valid.Difficulty,
+            Text = valid.Text,
+            Answer = valid.Answer,
+            Tags = valid.Tags,
             Source = QuestionSource.Manual
         };
 
@@ -97,48 +105,4 @@ public static class QuestionEndpoints
 
         return TypedResults.Created($"/api/questions/{question.Id}", question.ToResponse());
     }
-
-    private static Dictionary<string, string[]> Validate(
-        CreateQuestionRequest r, out Topic topic, out Difficulty difficulty, out List<string> tags)
-    {
-        var errors = new Dictionary<string, string[]>();
-        topic = default;
-        difficulty = default;
-
-        if (string.IsNullOrWhiteSpace(r.Topic))
-            errors["topic"] = ["Topic is required."];
-        else if (!EnumParsing.TryParseName(r.Topic, out topic))
-            errors["topic"] = [$"Topic must be one of: {EnumParsing.AllowedValues<Topic>()}."];
-
-        if (string.IsNullOrWhiteSpace(r.Difficulty))
-            errors["difficulty"] = ["Difficulty is required."];
-        else if (!EnumParsing.TryParseName(r.Difficulty, out difficulty))
-            errors["difficulty"] = [$"Difficulty must be one of: {EnumParsing.AllowedValues<Difficulty>()}."];
-
-        if (string.IsNullOrWhiteSpace(r.Text))
-            errors["text"] = ["Question text is required."];
-        else if (r.Text.Trim().Length > QuestionLimits.TextMaxLength)
-            errors["text"] = [$"Question text must be at most {QuestionLimits.TextMaxLength} characters."];
-
-        if (string.IsNullOrWhiteSpace(r.Answer))
-            errors["answer"] = ["Answer is required."];
-        else if (r.Answer.Trim().Length > QuestionLimits.AnswerMaxLength)
-            errors["answer"] = [$"Answer must be at most {QuestionLimits.AnswerMaxLength} characters."];
-
-        tags = (r.Tags ?? [])
-            .Select(NormalizeTag)
-            .Where(t => t.Length > 0)
-            .Distinct()
-            .ToList();
-
-        if (tags.Count > QuestionLimits.MaxTags)
-            errors["tags"] = [$"At most {QuestionLimits.MaxTags} tags are allowed."];
-        else if (tags.Any(t => t.Length > QuestionLimits.TagMaxLength))
-            errors["tags"] = [$"Each tag must be at most {QuestionLimits.TagMaxLength} characters."];
-
-        return errors;
-    }
-
-    /// <summary>Tags are case-insensitive: stored and matched trimmed and lowercase.</summary>
-    private static string NormalizeTag(string? tag) => tag?.Trim().ToLowerInvariant() ?? "";
 }
