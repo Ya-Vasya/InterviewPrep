@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, TOPICS, type StudySummary, type Topic } from '../../api/client'
 import { formatDueIn } from './format'
-import { parseTopics } from './StudySessionPage'
 import './study.css'
+import { parseTopics } from './topics'
 
 /** What a session for the chosen topics would contain, with the shared daily limits applied once. */
 export function selectionTotals(summary: StudySummary, selected: ReadonlySet<Topic>) {
