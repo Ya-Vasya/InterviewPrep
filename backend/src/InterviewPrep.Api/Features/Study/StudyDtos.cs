@@ -6,7 +6,11 @@ namespace InterviewPrep.Api.Features.Study;
 /// Rating and ids arrive loosely typed so a bad value becomes a validation problem
 /// instead of a generic JSON binding failure.
 /// </summary>
-public sealed record ReviewRequest(Guid? QuestionId, string? Rating, Guid? ReviewId);
+/// <param name="AttemptId">
+/// The answer attempt this rating follows, if the user checked an answer first. The review is recorded as
+/// AI-assisted only when that attempt is for the same question and the rating equals its suggested rating.
+/// </param>
+public sealed record ReviewRequest(Guid? QuestionId, string? Rating, Guid? ReviewId, Guid? AttemptId = null);
 
 /// <param name="NextIntervals">What each rating would produce next time this card is shown, e.g. when an Again card comes back in the same session.</param>
 public sealed record ReviewResponse(Guid ReviewId, Guid CardId, DateTime DueAt, int IntervalDays, RatingIntervals NextIntervals);

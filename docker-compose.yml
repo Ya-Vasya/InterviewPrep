@@ -21,6 +21,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: Host=db;Port=5432;Database=interviewprep;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}
+      # Optional. Without a key the AI features are switched off and the UI hides their controls.
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
