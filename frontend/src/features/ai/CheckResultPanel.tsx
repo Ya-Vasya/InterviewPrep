@@ -1,5 +1,6 @@
 import type { CheckAnswerResult, Verdict } from '../../api/client'
 import './ai.css'
+import { ExplainMistakes } from './ExplainMistakes'
 
 export function VerdictLabel({ verdict, score }: { verdict: Verdict; score: number }) {
   return (
@@ -10,7 +11,7 @@ export function VerdictLabel({ verdict, score }: { verdict: Verdict; score: numb
 }
 
 /** The AI's verdict on the typed answer, shown beside the reference answer. */
-export function CheckResultPanel({ result }: { result: CheckAnswerResult }) {
+export function CheckResultPanel({ result, questionId }: { result: CheckAnswerResult; questionId: string }) {
   return (
     <section className="ai-result" aria-label="AI verdict">
       <h3>
@@ -37,6 +38,7 @@ export function CheckResultPanel({ result }: { result: CheckAnswerResult }) {
           </ul>
         </>
       )}
+      <ExplainMistakes attemptId={result.attemptId} questionId={questionId} verdict={result.verdict} showUsage />
     </section>
   )
 }

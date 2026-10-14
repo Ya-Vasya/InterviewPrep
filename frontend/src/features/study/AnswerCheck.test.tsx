@@ -14,6 +14,7 @@ vi.mock('../../api/client', async (importOriginal) => ({
     getAiStatus: vi.fn(),
     checkAnswer: vi.fn(),
     getAnswerAttempts: vi.fn(),
+    getNote: vi.fn(),
   },
 }))
 
@@ -21,6 +22,7 @@ const postReview = vi.mocked(api.postReview)
 const getAiStatus = vi.mocked(api.getAiStatus)
 const checkAnswer = vi.mocked(api.checkAnswer)
 const getAnswerAttempts = vi.mocked(api.getAnswerAttempts)
+const getNote = vi.mocked(api.getNote)
 
 const item = (n: number): StudyQueueItem => ({
   questionId: `question-${n}`,
@@ -79,6 +81,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   getAiStatus.mockResolvedValue({ enabled: true, usedToday: 3, dailyCap: 50 })
   getAnswerAttempts.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 })
+  getNote.mockResolvedValue(null)
   postReview.mockImplementation(async ({ reviewId }) => ({
     reviewId,
     cardId: 'card',

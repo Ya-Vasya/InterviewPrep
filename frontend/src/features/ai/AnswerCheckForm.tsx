@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type CheckAnswerResult } from '../../api/client'
 import './ai.css'
+import { AiUsage } from './AiUsage'
 import { AI_STATUS_KEY, useAiStatus } from './useAiStatus'
 
 /** Mirrors CheckAnswerLimits.MaxAnswerLength on the backend. */
@@ -50,9 +51,7 @@ export function AnswerCheckForm({ questionId, onChecked }: Props) {
         <button type="submit" disabled={!canCheck}>
           {check.isPending ? 'Checking…' : 'Check with AI'}
         </button>
-        <span className="ai-usage">
-          AI calls today: {status.data.usedToday} / {status.data.dailyCap}
-        </span>
+        <AiUsage />
       </div>
       {check.error && (
         <p className="error" role="alert">

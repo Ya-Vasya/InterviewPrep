@@ -47,19 +47,16 @@ public static class CheckAnswerPrompt
         new(AiFeature.CheckAnswer, System,
             $"""
             <question>
-            {Escape(questionText)}
+            {PromptText.Escape(questionText)}
             </question>
             <reference_answer>
-            {Escape(referenceAnswer)}
+            {PromptText.Escape(referenceAnswer)}
             </reference_answer>
             <candidate_answer>
-            {Escape(candidateAnswer)}
+            {PromptText.Escape(candidateAnswer)}
             </candidate_answer>
             """,
             Schema);
-
-    /// <summary>Angle brackets are escaped so the text cannot close its block and start a fake one.</summary>
-    private static string Escape(string text) => text.Replace("<", "&lt;").Replace(">", "&gt;");
 
     /// <summary>Returns null when the JSON is not a valid check result.</summary>
     public static AnswerCheck? Parse(string json)

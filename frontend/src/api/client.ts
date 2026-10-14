@@ -133,6 +133,21 @@ export interface AnswerAttempt {
   suggestedRating: Rating
 }
 
+export interface ExplainMistakesResult {
+  attemptId: string
+  /** Concise markdown: per mistake what was wrong, why and the correct explanation. */
+  explanation: string
+}
+
+// --- Notes (mirrors backend/.../Features/Notes/NoteDtos.cs) ---
+
+/** The user's saved text for a question. It belongs to the question, not to the card. */
+export interface Note {
+  questionId: string
+  text: string
+  updatedAt: string
+}
+
 /** Shape of the backend's error bodies (RFC 9457 ProblemDetails; `errors` is set for validation failures). */
 interface ProblemDetails {
   title?: string
@@ -213,6 +228,31 @@ export const api = {
   /** The attempts for one question, newest first. */
   getAnswerAttempts: (questionId: string) =>
     get<Page<AnswerAttempt>>(`/api/ai/answers/attempts?${new URLSearchParams({ questionId })}`),
+
+  /** One-shot: nothing is stored. Only partial or incorrect attempts can be explained. */
+  explainMistakes: (attemptId: string) =>
+    request<ExplainMistakesResult>(`/api/ai/answers/explain?${new URLSearchParams({ tz: browserTimeZone() })}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attemptId }),
+    }),
+
+  /** The question's note, or null when it has none. */
+  getNote: async (questionId: string): Promise<Note | null> => {
+    try {
+      return await get<Note>(`/api/questions/${questionId}/note`)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null
+      throw e
+    }
+  },
+  /** Saves the note, replacing any existing one. Ask the user first when one exists. */
+  saveNote: (questionId: string, text: string) =>
+    request<Note>(`/api/questions/${questionId}/note`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }),
 
   /** Undo. A review that is already gone (404) counts as undone. */
   undoReview: async (reviewId: string) => {

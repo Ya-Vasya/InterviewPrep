@@ -1,4 +1,5 @@
 using InterviewPrep.Api.Features.Ai;
+using InterviewPrep.Api.Features.Notes;
 using InterviewPrep.Api.Features.Questions;
 using InterviewPrep.Api.Features.Study;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ReviewLog> ReviewLogs => Set<ReviewLog>();
     public DbSet<AiCall> AiCalls => Set<AiCall>();
     public DbSet<AnswerAttempt> AnswerAttempts => Set<AnswerAttempt>();
+    public DbSet<Note> Notes => Set<Note>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

@@ -127,12 +127,6 @@ public class AiGatewayTests(ApiFactory factory) : AiTestBase(factory), IClassFix
         Assert.Contains(question.Text, request.User);
         Assert.Contains(question.Answer.Split('\n')[0].Replace("<", "&lt;").Replace(">", "&gt;"), request.User);
     }
-
-    private static IEnumerable<int> Count(string text, string needle)
-    {
-        for (var i = text.IndexOf(needle, StringComparison.Ordinal); i >= 0; i = text.IndexOf(needle, i + 1, StringComparison.Ordinal))
-            yield return i;
-    }
 }
 
 /// <summary>The daily cap and how the day is decided.</summary>
