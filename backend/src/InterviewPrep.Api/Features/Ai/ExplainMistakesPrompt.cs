@@ -23,8 +23,8 @@ public static class ExplainMistakesPrompt
 
         Write concise markdown. For each mistake or gap, in order of importance, say what was wrong or missing,
         why it matters or why it is wrong, and the correct explanation. Add a short code example (a fenced code
-        block with a language tag) only when it makes the point clearer, and end with one follow-up question the
-        candidate can use to practise the weak spot. Address the candidate directly. Do not repeat the question
+        block with a language tag) only when it makes the point clearer, and when it helps, end with one follow-up
+        question the candidate can use to practise the weak spot. Address the candidate directly. Do not repeat the question
         or the whole reference answer.
 
         Reply with JSON only: {"explanation": "<the markdown>"}.

@@ -36,7 +36,7 @@ public abstract class AiTestBase : StudyTestBase
         $$"""{"verdict":"{{verdict}}","score":{{score}},"covered":["Singleton lifetime"],"missing":["Scoped vs transient"],"feedback":"Good start."}""";
 
     /// <summary>Where <paramref name="needle"/> occurs in <paramref name="text"/>, for "appears exactly once" checks.</summary>
-    protected static IEnumerable<int> Count(string text, string needle)
+    protected static IEnumerable<int> OccurrencesOf(string text, string needle)
     {
         for (var i = text.IndexOf(needle, StringComparison.Ordinal); i >= 0; i = text.IndexOf(needle, i + 1, StringComparison.Ordinal))
             yield return i;

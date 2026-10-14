@@ -58,7 +58,7 @@ public static class NoteEndpoints
         {
             note.Text = request.Text!;
             note.UpdatedAt = now;
-            db.Notes.Update(note);
+            db.Notes.Update(note); // the context does not track by default, so the loaded note must be attached
         }
 
         await db.SaveChangesAsync(ct);
