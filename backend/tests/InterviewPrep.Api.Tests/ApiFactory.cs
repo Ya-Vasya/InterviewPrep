@@ -68,13 +68,14 @@ public class ApiFactory : WebApplicationFactory<Program>
         });
     }
 
-    /// <summary>Forgets AI usage and stored answer attempts, and resets the scripted provider.</summary>
+    /// <summary>Forgets AI usage, stored answer attempts and notes, and resets the scripted provider.</summary>
     public void ResetAiData()
     {
         Ai.Reset();
 
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Notes.ExecuteDelete();
         db.AnswerAttempts.ExecuteDelete();
         db.AiCalls.ExecuteDelete();
         Clock.Reset();

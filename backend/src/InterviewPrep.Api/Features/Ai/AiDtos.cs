@@ -21,6 +21,13 @@ public sealed record CheckAnswerResponse(
     string Feedback,
     Study.Rating SuggestedRating);
 
+/// <summary>Loosely typed so a missing or bad value becomes a validation problem, not a JSON binding failure.</summary>
+/// <param name="AttemptId">The partial or incorrect answer attempt to explain.</param>
+public sealed record ExplainMistakesRequest(Guid? AttemptId);
+
+/// <param name="Explanation">Concise markdown: per mistake what was wrong, why and the correct explanation.</param>
+public sealed record ExplainMistakesResponse(Guid AttemptId, string Explanation);
+
 /// <summary>A stored answer attempt, as listed on the card back.</summary>
 public sealed record AnswerAttemptResponse(
     Guid Id,

@@ -22,6 +22,7 @@ src/InterviewPrep.Api/
     Study/                    # R2: Card, ReviewLog, endpoints, StudyQueueBuilder
       Scheduling/             # IScheduler + Sm2Scheduler (pure, no EF)
     Ai/                       # R3: IAiService, AnthropicAiService, prompts, schemas, AnswerAttempt
+    Notes/                    # R3c: Note (one per question, independent of the card), endpoints
     Plan/                     # R4: StudyPlan entity, endpoints
     Progress/                 # R4: ProgressCalculator (pure) + endpoint
 ```

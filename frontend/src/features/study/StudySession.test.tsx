@@ -8,7 +8,7 @@ import { StudySession } from './StudySession'
 
 vi.mock('../../api/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../api/client')>()),
-  api: { postReview: vi.fn(), undoReview: vi.fn(), getAiStatus: vi.fn() },
+  api: { postReview: vi.fn(), undoReview: vi.fn(), getAiStatus: vi.fn(), getNote: vi.fn() },
 }))
 
 const postReview = vi.mocked(api.postReview)
@@ -55,6 +55,7 @@ beforeEach(() => {
   undoReview.mockResolvedValue(undefined)
   // The existing flow is tested with AI switched off; AI has its own tests.
   vi.mocked(api.getAiStatus).mockResolvedValue({ enabled: false, usedToday: 0, dailyCap: 50 })
+  vi.mocked(api.getNote).mockResolvedValue(null)
 })
 
 describe('StudySession', () => {

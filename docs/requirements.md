@@ -8,7 +8,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 |---|-------------|--------|
 | R1 | Questions by topic | 🟡 (backend done; UI selector and persisted selection pending) |
 | R2 | Flashcards and spaced repetition | ✅ (suspend is API-only; there is no suspend button in the UI yet) |
-| R3 | AI: generate questions, check answers, explain mistakes | 🟡 (3b check answers and the AI foundation done; 3c explain and 3a generate pending) |
+| R3 | AI: generate questions, check answers, explain mistakes | 🟡 (3b check answers, 3c explain mistakes and the AI foundation done; 3a generate pending) |
 | R4 | Progress tracker based on a study plan | ⬜ |
 
 ## Context and assumptions
@@ -149,6 +149,10 @@ An LLM is used for three features:
 - **Output:** for each mistake, what was wrong or missing, why, and the correct explanation; optionally a small code example and a follow-up question. Concise, markdown.
 - Explanations can be saved to the card as a personal note. The note is stored per question, not on the `Card` (see [ADR 0001](adr/0001-notes-belong-to-the-question-not-the-card.md)): one note per question, and saving a new one replaces the old one only after the user confirms.
 - **Follow-up chat is out of scope** for the first version. Explanation is one-shot.
+- **Implemented (3c):**
+  - `POST /api/ai/answers/explain` takes `{ attemptId }` (plus the usual `tz` query) and returns `{ attemptId, explanation }`, the markdown. An unknown attempt or a `correct` one is a validation problem (400) and costs nothing. Nothing is stored. It goes through the same gateway as check (501 without a key, 429 at the cap, one retry on invalid output, 503 on provider failure), uses JSON-schema output `{ "explanation": string }`, and passes the answer in a delimited `<candidate_answer>` block, never in the system prompt.
+  - `GET /api/questions/{questionId}/note` returns the question's `Note` (`questionId`, `text`, `updatedAt`) or 404; `PUT` with `{ text }` (1–20,000 characters) creates it or replaces the existing one. The server does not ask for confirmation, the UI does. A 404 for an unknown question.
+  - UI: "Explain my mistakes" on a partial or incorrect verdict panel and on partial or incorrect rows of "Previous attempts"; the explanation renders as markdown with a "Save as note" button that asks before replacing an existing note; the note shows on the card back (also without AI configured, it is the user's own content).
 
 ### Acceptance criteria
 

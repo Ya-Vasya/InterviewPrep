@@ -16,6 +16,7 @@ public static class AiEndpoints
         group.MapGet("/status", GetStatus).WithName("GetAiStatus");
         group.MapPost("/answers/check", CheckAnswer).WithName("CheckAnswer");
         group.MapGet("/answers/attempts", GetAttempts).WithName("GetAnswerAttempts");
+        group.MapPost("/answers/explain", ExplainMistakes).WithName("ExplainMistakes");
 
         return app;
     }
@@ -61,6 +62,46 @@ public static class AiEndpoints
 
         return TypedResults.Ok(new PagedResponse<AnswerAttemptResponse>(
             attempts.Select(AnswerAttemptResponse.From).ToList(), total, take, skip));
+    }
+
+    /// <summary>One-shot: nothing is stored. Saving the explanation as a note is a separate call.</summary>
+    private static async Task<Results<Ok<ExplainMistakesResponse>, ValidationProblem, ProblemHttpResult>> ExplainMistakes(
+        ExplainMistakesRequest request, string? tz,
+        AppDbContext db, AiGateway gateway, TimeProvider time, HttpContext http, CancellationToken ct)
+    {
+        var errors = new ValidationErrors();
+
+        if (request.AttemptId is null || request.AttemptId == Guid.Empty)
+            errors.Add("attemptId", "Attempt id is required.");
+
+        if (!StudyDay.TryGetZone(tz, out var zone))
+            errors.Add("tz", "Unknown time zone.");
+
+        var attempt = errors.Any
+            ? null
+            : await db.AnswerAttempts.Include(a => a.Question).FirstOrDefaultAsync(a => a.Id == request.AttemptId, ct);
+
+        if (!errors.Any)
+        {
+            if (attempt is null)
+                errors.Add("attemptId", "No answer attempt with this id exists.");
+            else if (attempt.Verdict == Verdict.Correct)
+                errors.Add("attemptId", "Only partial or incorrect attempts can be explained.");
+        }
+
+        if (errors.Any)
+            return errors.ToProblem();
+
+        var outcome = await gateway.RunAsync(
+            ExplainMistakesPrompt.Build(attempt!.Question.Text, attempt.Question.Answer, attempt),
+            ExplainMistakesPrompt.Parse,
+            StudyDay.StartOfDayUtc(time.GetUtcNow().UtcDateTime, zone),
+            ct);
+
+        if (!outcome.Succeeded)
+            return outcome.ToProblem(http);
+
+        return TypedResults.Ok(new ExplainMistakesResponse(attempt.Id, outcome.Value!.Markdown));
     }
 
     private static async Task<Results<Ok<CheckAnswerResponse>, ValidationProblem, ProblemHttpResult>> CheckAnswer(
