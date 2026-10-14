@@ -1,7 +1,10 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { api, type Rating, type ReviewRequest, type StudyQueueItem, type Topic } from '../../api/client'
+import { api, type CheckAnswerResult, type Rating, type ReviewRequest, type StudyQueueItem, type Topic } from '../../api/client'
+import { AnswerCheckForm } from '../ai/AnswerCheckForm'
+import { AttemptHistory } from '../ai/AttemptHistory'
+import { CheckResultPanel } from '../ai/CheckResultPanel'
 import { FlashCard } from './FlashCard'
 import { newGuid } from './format'
 import { RatingButtons } from './RatingButtons'
@@ -30,6 +33,10 @@ export function StudySession({ items, topics }: Props) {
   const entry = currentEntry(state)
   const finished = entry === undefined
 
+  // The AI check of the card showing now. It belongs to one showing of a card, so it is keyed by the entry.
+  const [check, setCheck] = useState<{ entryKey: string; result: CheckAnswerResult } | null>(null)
+  const currentCheck = entry && check?.entryKey === entry.key ? check.result : null
+
   // Latest state for the async handlers below, and one-shot guards keyed by reviewId.
   const stateRef = useRef(state)
   useEffect(() => {
@@ -49,7 +56,12 @@ export function StudySession({ items, topics }: Props) {
     dispatch({ type: 'rate', rating, requeueKey, requeueReviewId: newGuid() })
 
     const request = rateMutation
-      .mutateAsync({ questionId: entry.item.questionId, rating, reviewId: entry.reviewId })
+      .mutateAsync({
+        questionId: entry.item.questionId,
+        rating,
+        reviewId: entry.reviewId,
+        attemptId: currentCheck?.attemptId,
+      })
       .then((result) => {
         // The re-queued copy of an Again card needs the intervals of its new state.
         if (rating === 'Again') dispatch({ type: 'intervals', key: requeueKey, intervals: result.nextIntervals })
@@ -74,6 +86,7 @@ export function StudySession({ items, topics }: Props) {
       if (stateRef.current.history.at(-1)?.entry.reviewId !== record.entry.reviewId) return // it failed and was restored already
       await undoMutation.mutateAsync(record.entry.reviewId)
       ratedReviewIds.current.delete(record.entry.reviewId)
+      setCheck(null)
       dispatch({ type: 'undo', reviewId: newGuid() })
     } catch {
       setError("Couldn't undo the last rating. Check your connection and try again.")
@@ -145,7 +158,31 @@ export function StudySession({ items, topics }: Props) {
             behind={state.deck.length - state.index - 1}
             leaving={state.leaving}
           />
-          {state.flipped && <RatingButtons intervals={entry.intervals} disabled={undoing} onRate={rate} />}
+          {!state.flipped && (
+            <AnswerCheckForm
+              key={entry.key}
+              questionId={entry.item.questionId}
+              onChecked={(result) => {
+                // The AI can answer after the user flipped, rated and moved on; the result then belongs to a
+                // card that is no longer showing and must not flip the current one.
+                if (currentEntry(stateRef.current)?.key !== entry.key) return
+                setCheck({ entryKey: entry.key, result })
+                flip()
+              }}
+            />
+          )}
+          {state.flipped && currentCheck && <CheckResultPanel result={currentCheck} />}
+          {state.flipped && (
+            <AttemptHistory questionId={entry.item.questionId} excludeAttemptId={currentCheck?.attemptId} />
+          )}
+          {state.flipped && (
+            <RatingButtons
+              intervals={entry.intervals}
+              disabled={undoing}
+              onRate={rate}
+              suggested={currentCheck?.suggestedRating}
+            />
+          )}
         </>
       ) : (
         <div className="study-done">

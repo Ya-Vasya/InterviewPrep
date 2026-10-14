@@ -1,10 +1,12 @@
 using InterviewPrep.Api.Data;
+using InterviewPrep.Api.Features.Ai;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -34,6 +36,12 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     public FakeClock Clock { get; } = new();
 
+    /// <summary>The scripted LLM. Tests never call the real provider.</summary>
+    public FakeAiService Ai { get; } = new();
+
+    /// <summary>False to run with the real AI wiring (and no API key), e.g. to test the disabled state.</summary>
+    protected virtual bool UseFakeAi => true;
+
     /// <summary>Extra configuration for the app, e.g. <c>Study:NewCardsPerDay</c>.</summary>
     protected virtual IReadOnlyDictionary<string, string?> Settings { get; } = new Dictionary<string, string?>();
 
@@ -48,7 +56,28 @@ public class ApiFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(Settings);
         });
 
-        builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<TimeProvider>(Clock);
+
+            if (UseFakeAi)
+            {
+                services.RemoveAll<IAiService>();
+                services.AddSingleton<IAiService>(Ai);
+            }
+        });
+    }
+
+    /// <summary>Forgets AI usage and stored answer attempts, and resets the scripted provider.</summary>
+    public void ResetAiData()
+    {
+        Ai.Reset();
+
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.AnswerAttempts.ExecuteDelete();
+        db.AiCalls.ExecuteDelete();
+        Clock.Reset();
     }
 
     /// <summary>Deletes all cards and reviews and rewinds the clock, so a test starts from a clean slate.</summary>

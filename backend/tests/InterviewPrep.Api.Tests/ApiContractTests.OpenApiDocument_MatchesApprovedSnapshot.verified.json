@@ -425,10 +425,191 @@
           }
         }
       }
+    },
+    "/api/ai/status": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "GetAiStatus",
+        "parameters": [
+          {
+            "name": "tz",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/answers/check": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "CheckAnswer",
+        "parameters": [
+          {
+            "name": "tz",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckAnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckAnswerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/answers/attempts": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "GetAnswerAttempts",
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResponseOfAnswerAttemptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AiStatusResponse": {
+        "required": [
+          "enabled",
+          "usedToday",
+          "dailyCap"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "usedToday": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dailyCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "AnonymousTypeOfstring": {
         "required": [
           "status"
@@ -440,6 +621,136 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AnswerAttemptResponse": {
+        "required": [
+          "id",
+          "questionId",
+          "answer",
+          "verdict",
+          "score",
+          "covered",
+          "missing",
+          "feedback",
+          "createdAt",
+          "suggestedRating"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict"
+          },
+          "score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "suggestedRating": {
+            "$ref": "#/components/schemas/Rating"
+          }
+        }
+      },
+      "CheckAnswerRequest": {
+        "required": [
+          "questionId",
+          "answer"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "answer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CheckAnswerResponse": {
+        "required": [
+          "attemptId",
+          "verdict",
+          "score",
+          "covered",
+          "missing",
+          "feedback",
+          "suggestedRating"
+        ],
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict"
+          },
+          "score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "suggestedRating": {
+            "$ref": "#/components/schemas/Rating"
           }
         }
       },
@@ -541,6 +852,47 @@
           }
         }
       },
+      "PagedResponseOfAnswerAttemptResponse": {
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerAttemptResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "offset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PagedResponseOfQuestionResponse": {
         "required": [
           "items",
@@ -628,6 +980,14 @@
           "Ai"
         ]
       },
+      "Rating": {
+        "enum": [
+          "Again",
+          "Hard",
+          "Good",
+          "Easy"
+        ]
+      },
       "RatingIntervals": {
         "required": [
           "again",
@@ -693,6 +1053,13 @@
             ]
           },
           "reviewId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "attemptId": {
             "type": [
               "null",
               "string"
@@ -891,6 +1258,13 @@
             "format": "int32"
           }
         }
+      },
+      "Verdict": {
+        "enum": [
+          "Correct",
+          "Partial",
+          "Incorrect"
+        ]
       }
     }
   },
@@ -903,6 +1277,9 @@
     },
     {
       "name": "Study"
+    },
+    {
+      "name": "AI"
     }
   ]
 }

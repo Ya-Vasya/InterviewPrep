@@ -23,6 +23,68 @@ namespace InterviewPrep.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("InterviewPrep.Api.Features.Ai.AiCall", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CalledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Feature")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalledAt");
+
+                    b.ToTable("AiCalls");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Ai.AnswerAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("Covered")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Feedback")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("Missing")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Verdict")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId", "CreatedAt");
+
+                    b.ToTable("AnswerAttempts");
+                });
+
             modelBuilder.Entity("InterviewPrep.Api.Features.Questions.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -167,6 +229,17 @@ namespace InterviewPrep.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("ReviewLogs");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Ai.AnswerAttempt", b =>
+                {
+                    b.HasOne("InterviewPrep.Api.Features.Questions.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("InterviewPrep.Api.Features.Study.Card", b =>

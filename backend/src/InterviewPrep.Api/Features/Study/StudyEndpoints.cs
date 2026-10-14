@@ -1,5 +1,6 @@
 using InterviewPrep.Api.Common;
 using InterviewPrep.Api.Data;
+using InterviewPrep.Api.Features.Ai;
 using InterviewPrep.Api.Features.Questions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -180,6 +181,7 @@ public static class StudyEndpoints
 
         var questionId = request.QuestionId!.Value;
         var reviewId = request.ReviewId!.Value;
+        var source = await GetSourceAsync(request.AttemptId, questionId, rating, db, ct);
 
         // Two attempts: the first can lose a race (same reviewId, or two first ratings of one question
         // creating the card). The unique indexes reject the loser, and the retry then finds the winner's rows.
@@ -219,7 +221,7 @@ public static class StudyEndpoints
                 CardId = card.Id,
                 RatedAt = now,
                 Rating = rating,
-                Source = ReviewSource.Self,
+                Source = source,
                 CardCreated = created,
                 Before = before,
                 ResultDueAt = after.DueAt,
@@ -242,6 +244,22 @@ public static class StudyEndpoints
             statusCode: StatusCodes.Status409Conflict,
             title: "Review conflict",
             detail: "The review could not be recorded because of a concurrent change. Try again.");
+    }
+
+    /// <summary>
+    /// A rating is AI-assisted only when the user accepted the suggestion: the attempt must be for this question and
+    /// the rating must equal its suggested rating. Decided here so a client cannot claim it. Anything else is self-rated.
+    /// </summary>
+    private static async Task<ReviewSource> GetSourceAsync(
+        Guid? attemptId, Guid questionId, Rating rating, AppDbContext db, CancellationToken ct)
+    {
+        if (attemptId is null || attemptId == Guid.Empty)
+            return ReviewSource.Self;
+
+        var attempt = await db.AnswerAttempts
+            .FirstOrDefaultAsync(a => a.Id == attemptId && a.QuestionId == questionId, ct);
+
+        return attempt?.Verdict.SuggestedRating() == rating ? ReviewSource.Ai : ReviewSource.Self;
     }
 
     /// <summary>Undo: restores the card from the snapshot and deletes the review. Only the card's latest review can be undone.</summary>
