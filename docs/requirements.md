@@ -108,17 +108,23 @@ An LLM is used for three features:
 
 - **Provider:** the Anthropic Claude API, called **only from the backend**. The API key is never sent to or stored in the browser. It is configured through .NET user-secrets in development and an environment variable in production (`Anthropic:ApiKey`), never committed.
 - **Abstraction:** the backend talks to an `IAiService` interface, so the model can be changed or faked in tests. Tests never call the real API.
-- **Structured output:** all three features request JSON that the backend validates against a schema before returning it. Invalid output is retried once, then returned as an error.
+- **Client and model:** the official Anthropic .NET SDK behind `IAiService`. One setting, `Anthropic:Model` (default `claude-sonnet-5-5`), serves all features; there are no per-feature models. Effort is `low` for check and explain. Max output tokens are set per feature in configuration (about 1,500 for check, 2,000 for explain, 4,000 for generate).
+- **Structured output:** all three features request JSON through the API's JSON-schema output (`output_config.format`), not forced tool calls (which the chosen model rejects), and the backend validates it against a schema before returning it. Invalid output is retried once, then returned as an error.
+- **AI status:** `GET /api/ai/status` returns `{ enabled, usedToday, dailyCap }`. One frontend hook reads it, hides the AI controls when `enabled` is false and shows the usage counter next to the AI controls (not in the global nav).
 - **Untrusted input:** the user's answer is data, not instructions. It is passed to the model in a clearly delimited block, and the system prompt tells the model to ignore instructions inside it. The user's answer is never concatenated into the system prompt.
 - **Failure behavior:** timeouts (default 30 s), rate-limit and provider errors map to a clear HTTP error (503 with a `retryAfter` where known). The rest of the app, including flashcards and progress, works fully without AI. If no API key is configured, AI endpoints return 501 and the UI hides the AI buttons.
 - **Cost control:** a configurable per-day cap on AI calls (default 50) and a max output size per call. Usage is counted and visible to the user.
+  - Every request that reaches the provider counts, including the structured-output retry and calls that fail or time out. Requests rejected before the provider (no key, validation error, cap already reached) do not count.
+  - The day follows the browser's time zone (the same `tz` parameter as the study endpoints). The count is stored in the database, so a restart does not reset it.
+  - Rough cost with the default model: about $0.01 per check, $0.015 per explanation and $0.04 per generation of five questions. Typical use is a few dollars a month and the cap bounds the worst case to a few dollars a day (estimate from list prices; re-check current pricing).
 
 #### 3a. Generate questions
 
 - **Inputs:** `topic` (required), `difficulty` (required), `count` (1–10, default 5), optional `subtopic/tag` and optional free-text focus ("distributed caching").
 - **Output per question:** `text`, `answer` (markdown), `tags`, `difficulty`.
 - **Review before saving:** generated questions are returned as **drafts**. Nothing is stored until the user accepts them (individually, with optional edits). Accepted questions get `source = AI`.
-- **Duplicates:** before returning drafts the backend sends the model the existing question texts for that topic (capped) and drops drafts that are near-duplicates of existing ones (normalized-text match as a minimum).
+- **Duplicates:** before returning drafts the backend sends the model the existing question texts for that topic (capped) and drops drafts that are near-duplicates of existing ones (normalized-text match as a minimum). The cap is 200 texts; normalization is lowercase, punctuation stripped, whitespace collapsed.
+- **UI and accepting:** a "Generate" page in the main nav with a form (topic, difficulty, count, optional tag and focus) and a list of drafts, each with Edit, Accept and Discard. Drafts exist only in the browser. Accepting calls `POST /api/ai/questions/accept` with a batch of (possibly edited) drafts; the server re-validates them with `QuestionValidator` and saves them with `Source = AI`. `POST /api/questions` stays `Manual`.
 - **Accuracy caveat:** the UI labels generated content "AI-generated, verify before relying on it". Reference answers can be wrong.
 
 #### 3b. Check answers
@@ -131,14 +137,17 @@ An LLM is used for three features:
   - `missing`: key points that were left out;
   - `feedback`: short, specific comments.
 - The model is given the question and the stored reference answer as the grading basis. It may point out that the reference is incomplete, but it grades against the reference.
-- **Link to spaced repetition:** the verdict suggests a rating (`incorrect → Again`, `partial → Hard`, `correct → Good`). The user can accept or override it. The review log records `source = ai` when the suggestion is accepted.
+- **Link to spaced repetition:** the verdict suggests a rating (`incorrect → Again`, `partial → Hard`, `correct → Good`). The user can accept or override it. The review log records `source = ai` when the suggestion is accepted. A check never rates a card by itself.
+  - `POST /api/study/reviews` accepts an optional `attemptId`. The server, not the client, sets `source = Ai` only when that attempt belongs to the same question and the rating sent equals the suggested rating; otherwise `Self`.
+- **UI:** on the card front, when AI is enabled, an optional "Type your answer" textarea and a "Check with AI" button. The Space and 1–4 shortcuts are ignored while the textarea has focus. Submitting flips the card and shows the verdict next to the reference answer, with the suggested rating highlighted but not applied. Skipping the textarea leaves the flow unchanged.
+- **Limits:** the typed answer is 1–4,000 characters; an empty one returns a validation problem (HTTP 400).
 - **Stored:** each check saves the user's answer, the result and a timestamp (`AnswerAttempt`) so mistakes can be revisited and counted in R4.
 
 #### 3c. Explain mistakes
 
-- Triggered from a `partial` or `incorrect` check result ("Explain my mistakes"), and also on demand for any card the user failed.
+- Triggered from a `partial` or `incorrect` check result ("Explain my mistakes"), and also on demand for any card the user failed. An explanation always needs an `AnswerAttempt`: "on demand" means reopening a past `partial` or `incorrect` attempt of that question. The card back shows the question's most recent attempt, with a way to open earlier ones.
 - **Output:** for each mistake, what was wrong or missing, why, and the correct explanation; optionally a small code example and a follow-up question. Concise, markdown.
-- Explanations can be saved to the card as a personal note.
+- Explanations can be saved to the card as a personal note. The note is stored per question, not on the `Card` (see [ADR 0001](adr/0001-notes-belong-to-the-question-not-the-card.md)): one note per question, and saving a new one replaces the old one only after the user confirms.
 - **Follow-up chat is out of scope** for the first version. Explanation is one-shot.
 
 ### Acceptance criteria
@@ -221,7 +230,7 @@ All derived from card state and the review log; nothing is entered by hand.
 1. **Foundation:** database (PostgreSQL + EF Core), Topic enum and filters (R1).
 2. **Flashcards + SM-2** with review log (R2). This is the core loop and the data source for R4.
 3. **Study plan + progress dashboard** (R4).
-4. **AI** (R3): answer checking first (highest value, feeds R2), then explanations, then question generation.
+4. **AI** (R3): answer checking first (highest value, feeds R2), then explanations, then question generation. Each of 3b (together with the shared AI foundation: `IAiService`, key handling, daily cap, `GET /api/ai/status`), 3c and 3a is its own branch and pull request, in that order. An AI chat window docked on every page was discussed and deferred; it is not part of this round, so follow-up chat stays out of scope.
 
 AI is last because it is the only part that needs an external account and cost control, and the app is useful without it. Dependencies: R4 needs R2's review log; R3b feeds ratings into R2.
 

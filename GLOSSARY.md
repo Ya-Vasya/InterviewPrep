@@ -35,3 +35,27 @@ _Avoid_: Answer attempt (that is an AI-checked free-text answer, a different thi
 **Study session**:
 One sitting of working through due cards, then new cards, rating each one.
 _Avoid_: Quiz, round
+
+**Answer attempt**:
+The user's own free-text answer to a question, typed before seeing the reference answer, together with the AI's verdict on it. Checking an attempt never rates a card by itself.
+_Avoid_: Review (a review is a rating, not an answer), submission
+
+**Verdict**:
+The AI's judgement of an answer attempt against the reference answer: correct, partial or incorrect, with a score and the key points covered and missed.
+_Avoid_: Rating (that is the user's own choice), grade
+
+**Suggested rating**:
+The Rating implied by a verdict (incorrect is Again, partial is Hard, correct is Good). It is only a suggestion: the user accepts or overrides it, and a review counts as AI-assisted only when the user's rating matches it.
+_Avoid_: Auto-rating
+
+**Explanation**:
+The AI's account of what was wrong or missing in a partial or incorrect answer attempt, and why. One-shot, tied to one attempt.
+_Avoid_: Chat, feedback (feedback is the short comment inside a verdict)
+
+**Note**:
+A personal text the user keeps for a question, such as a saved explanation. A question has at most one note, and it belongs to the question rather than to the card.
+_Avoid_: Comment, annotation
+
+**Draft**:
+An AI-generated question the user has not accepted yet. Nothing is stored until it is accepted, and an accepted draft becomes a question with the AI as its source.
+_Avoid_: Suggestion, candidate question
