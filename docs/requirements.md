@@ -8,7 +8,7 @@ Product requirements for Interview Prep. This is the source of truth for **what*
 |---|-------------|--------|
 | R1 | Questions by topic | 🟡 (backend done; UI selector and persisted selection pending) |
 | R2 | Flashcards and spaced repetition | ✅ (suspend is API-only; there is no suspend button in the UI yet) |
-| R3 | AI: generate questions, check answers, explain mistakes | 🟡 (3b check answers, 3c explain mistakes and the AI foundation done; 3a generate pending) |
+| R3 | AI: generate questions, check answers, explain mistakes | ✅ (3b check answers, 3c explain mistakes, 3a generate questions and the AI foundation) |
 | R4 | Progress tracker based on a study plan | ⬜ |
 
 ## Context and assumptions
@@ -108,7 +108,7 @@ An LLM is used for three features:
 
 - **Provider:** the Anthropic Claude API, called **only from the backend**. The API key is never sent to or stored in the browser. It is configured through .NET user-secrets in development and an environment variable in production (`Anthropic:ApiKey`), never committed.
 - **Abstraction:** the backend talks to an `IAiService` interface, so the model can be changed or faked in tests. Tests never call the real API.
-- **Client and model:** the official Anthropic .NET SDK behind `IAiService`. One setting, `Anthropic:Model` (default `claude-sonnet-5-5`), serves all features; there are no per-feature models. Effort is `low` for check and explain. Max output tokens are set per feature in configuration (about 1,500 for check, 2,000 for explain, 4,000 for generate).
+- **Client and model:** the official Anthropic .NET SDK behind `IAiService`. One setting, `Anthropic:Model` (default `claude-sonnet-5-5`), serves all features; there are no per-feature models. Effort is `low` for check and explain. Max output tokens are set per feature in configuration (about 1,500 for check, 2,000 for explain, and for generate about 800 per requested question plus 500).
 - **Structured output:** all three features request JSON through the API's JSON-schema output (`output_config.format`), not forced tool calls (which the chosen model rejects), and the backend validates it against a schema before returning it. Invalid output is retried once, then returned as an error.
 - **AI status:** `GET /api/ai/status` returns `{ enabled, usedToday, dailyCap }`. One frontend hook reads it, hides the AI controls when `enabled` is false and shows the usage counter next to the AI controls (not in the global nav).
 - **Untrusted input:** the user's answer is data, not instructions. It is passed to the model in a clearly delimited block, and the system prompt tells the model to ignore instructions inside it. The user's answer is never concatenated into the system prompt.
@@ -116,16 +116,19 @@ An LLM is used for three features:
 - **Cost control:** a configurable per-day cap on AI calls (default 50) and a max output size per call. Usage is counted and visible to the user.
   - Every request that reaches the provider counts, including the structured-output retry and calls that fail or time out. Requests rejected before the provider (no key, validation error, cap already reached) do not count.
   - The day follows the browser's time zone (the same `tz` parameter as the study endpoints). The count is stored in the database, so a restart does not reset it.
-  - Rough cost with the default model: about $0.01 per check, $0.015 per explanation and $0.04 per generation of five questions. Typical use is a few dollars a month and the cap bounds the worst case to a few dollars a day (estimate from list prices; re-check current pricing).
+  - Rough cost with the default model: about $0.01 per check, $0.015 per explanation and $0.04-0.08 per generation of five questions (the four-part answers are longer than the seed answers). Typical use is a few dollars a month and the cap bounds the worst case to a few dollars a day (estimate from list prices; re-check current pricing).
 
 #### 3a. Generate questions
 
-- **Inputs:** `topic` (required), `difficulty` (required), `count` (1–10, default 5), optional `subtopic/tag` and optional free-text focus ("distributed caching").
-- **Output per question:** `text`, `answer` (markdown), `tags`, `difficulty`.
+- **Inputs:** `topic` (required), `difficulty` (required), `count` (1–10, default 5), optional `subtopic/tag` and optional free-text focus ("distributed caching", at most 200 characters). One request generates the whole **generation run**: one counted provider call, plus a retry only if the output was invalid.
+- **Output per question:** `text`, `answer` (markdown) and `tags`. The server stamps each draft with the requested topic and difficulty (the model does not choose a difficulty), and the requested tag is always among the tags. Parsing is lenient: tags are normalized and trimmed to the limit and only a broken draft is skipped; output with no usable draft at all counts as invalid and is retried once.
+- **Answer format:** 150-350 words of markdown in four parts, so the answers teach and the AI grader (3b) has a predictable place to find the essentials: a short answer (2-3 sentences you could say in an interview), key points (3-6 bullets a strong answer must cover), an optional small code example, and common pitfalls or likely follow-ups.
 - **Review before saving:** generated questions are returned as **drafts**. Nothing is stored until the user accepts them (individually, with optional edits). Accepted questions get `source = AI`.
-- **Duplicates:** before returning drafts the backend sends the model the existing question texts for that topic (capped) and drops drafts that are near-duplicates of existing ones (normalized-text match as a minimum). The cap is 200 texts; normalization is lowercase, punctuation stripped, whitespace collapsed.
-- **UI and accepting:** a "Generate" page in the main nav with a form (topic, difficulty, count, optional tag and focus) and a list of drafts, each with Edit, Accept and Discard. Drafts exist only in the browser. Accepting calls `POST /api/ai/questions/accept` with a batch of (possibly edited) drafts; the server re-validates them with `QuestionValidator` and saves them with `Source = AI`. `POST /api/questions` stays `Manual`.
-- **Accuracy caveat:** the UI labels generated content "AI-generated, verify before relying on it". Reference answers can be wrong.
+- **Duplicates:** the backend sends the model the existing question texts for that topic (up to 200, same difficulty first) and drops drafts that are **duplicates**: the normalized text (lowercase, whitespace collapsed, punctuation stripped except `#` and `+`, so "C#" and "C" differ) matches any existing question of the topic, or an earlier draft in the same run. The 200 cap limits only what goes into the prompt. The response reports `duplicatesDropped`; fewer drafts than asked is not an error and there is no automatic second call.
+- **UI and accepting:** a "Generate" page in the main nav (only when AI is enabled; a direct visit with AI disabled shows a short "AI is not configured" message). The form (topic, difficulty, count, optional tag and focus, usage counter) sits at the top of the main area. A resizable side panel on the left lists the drafts as truncated questions: while the call runs it shows `count` placeholders with spinners, hovering an item shows a pencil (edit) and a red cross (discard), and an accepted draft shows a green check and is read-only. Clicking an item shows it read-only in the main area (label, rendered answer, tags, difficulty); the pencil switches it to edit mode; Accept and Discard are in its footer; "Accept all" is pinned to the bottom of the side panel. Drafts exist only in the browser (a refresh loses them): a new run replaces the previous list and asks first while drafts are pending, and leaving or closing the page asks too, but only while drafts are pending. A failed run shows the error with a Retry button; there is no Cancel button, because the provider call cannot be undone and still counts.
+- **Accepting:** `POST /api/ai/questions/accept` takes 1-10 (possibly edited) drafts; the server re-validates each with `QuestionValidator`, re-checks duplicates and saves the valid ones with `Source = AI`. The response lists `accepted` questions and `rejected` drafts (index and errors, or "already exists") so one bad draft does not lose the rest, and a double submit creates no second copy. `POST /api/questions` stays `Manual` and does no duplicate check.
+- **Accuracy caveat:** the UI labels generated content "AI-generated, verify before relying on it" on every draft, on AI-sourced rows of the question list and on the study card back. Reference answers can be wrong.
+- **Limits:** the output token budget scales with the count (about 800 tokens per question plus 500), and generation has its own provider timeout of 120 s; check and explain keep 30 s. Both are configuration.
 
 #### 3b. Check answers
 
@@ -227,6 +230,8 @@ All derived from card state and the review log; nothing is entered by hand.
 - Mobile apps, offline mode, import/export of Anki decks (a good later candidate).
 - Mock interviews with voice or video; code execution and coding challenges.
 - Follow-up chat with the AI about an explanation.
+- Later, not scheduled: a separate Questions management panel to edit and delete questions (including AI-sourced ones).
+- Later, not scheduled: saving drafts on the server so they survive a refresh, including drafts the user writes themselves.
 - Content outside the four topics (front-end, DevOps, algorithms).
 
 ## Suggested delivery order

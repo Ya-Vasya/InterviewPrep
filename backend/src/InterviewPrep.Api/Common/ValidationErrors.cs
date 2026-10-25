@@ -12,6 +12,9 @@ public sealed class ValidationErrors
 
     public bool Any => _errors.Count > 0;
 
+    /// <summary>The errors collected so far, for callers that report them inside a larger response.</summary>
+    public IReadOnlyDictionary<string, string[]> Errors => _errors;
+
     public void Add(string field, string message) => _errors[field] = [message];
 
     public void AddNotOneOf<TEnum>(string field) where TEnum : struct, Enum =>

@@ -10,6 +10,7 @@ const item = (n: number): StudyQueueItem => ({
   text: `Question ${n}`,
   answer: `Answer ${n}`,
   tags: [],
+  source: 'Seed',
   isNew: true,
   intervals: { again: 0, hard: 1, good: 1, easy: 3 },
 })

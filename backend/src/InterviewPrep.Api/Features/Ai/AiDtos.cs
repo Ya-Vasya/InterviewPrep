@@ -28,6 +28,28 @@ public sealed record ExplainMistakesRequest(Guid? AttemptId);
 /// <param name="Explanation">Concise markdown: per mistake what was wrong, why and the correct explanation.</param>
 public sealed record ExplainMistakesResponse(Guid AttemptId, string Explanation);
 
+/// <summary>Topic and difficulty arrive as strings so an unknown value becomes a validation problem.</summary>
+/// <param name="Count">1-10, default 5.</param>
+/// <param name="Tag">Optional subtopic every Draft is tagged with.</param>
+/// <param name="Focus">Optional free text steering the questions, at most 200 characters.</param>
+public sealed record GenerateQuestionsRequest(string? Topic, string? Difficulty, int? Count, string? Tag, string? Focus);
+
+/// <summary>A generated question the user has not accepted yet. Nothing about it is stored.</summary>
+public sealed record DraftResponse(
+    Common.Topic Topic, Common.Difficulty Difficulty, string Text, string Answer, IReadOnlyList<string> Tags);
+
+/// <param name="DuplicatesDropped">Drafts skipped because they repeat an existing question or each other.</param>
+public sealed record GenerateQuestionsResponse(IReadOnlyList<DraftResponse> Drafts, int DuplicatesDropped);
+
+/// <summary>The possibly edited Drafts to save, in the shape of a create-question request.</summary>
+public sealed record AcceptDraftsRequest(IReadOnlyList<Questions.CreateQuestionRequest?>? Drafts);
+
+/// <param name="Index">Position of the Draft in the request.</param>
+public sealed record RejectedDraft(int Index, IReadOnlyDictionary<string, string[]> Errors);
+
+public sealed record AcceptDraftsResponse(
+    IReadOnlyList<Questions.QuestionResponse> Accepted, IReadOnlyList<RejectedDraft> Rejected);
+
 /// <summary>A stored answer attempt, as listed on the card back.</summary>
 public sealed record AnswerAttemptResponse(
     Guid Id,

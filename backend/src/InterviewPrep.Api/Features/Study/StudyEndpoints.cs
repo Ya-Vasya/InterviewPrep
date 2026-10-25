@@ -150,7 +150,7 @@ public static class StudyEndpoints
     }
 
     private static StudyQueueItem ToItem(Question q, Guid? cardId, CardState state, bool isNew, IScheduler scheduler) =>
-        new(q.Id, cardId, q.Topic, q.Difficulty, q.Text, q.Answer, q.Tags, isNew, IntervalsFor(state, scheduler));
+        new(q.Id, cardId, q.Topic, q.Difficulty, q.Text, q.Answer, q.Tags, q.Source, isNew, IntervalsFor(state, scheduler));
 
     /// <summary>Intervals do not depend on the clock, so this is also correct for a replayed review.</summary>
     private static RatingIntervals IntervalsFor(CardState state, IScheduler scheduler) =>

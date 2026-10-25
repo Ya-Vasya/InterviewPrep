@@ -17,6 +17,7 @@ public static class AiEndpoints
         group.MapPost("/answers/check", CheckAnswer).WithName("CheckAnswer");
         group.MapGet("/answers/attempts", GetAttempts).WithName("GetAnswerAttempts");
         group.MapPost("/answers/explain", ExplainMistakes).WithName("ExplainMistakes");
+        group.MapQuestionGenerationEndpoints();
 
         return app;
     }

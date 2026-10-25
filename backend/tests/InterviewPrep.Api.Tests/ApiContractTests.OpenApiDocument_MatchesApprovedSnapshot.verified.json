@@ -627,6 +627,95 @@
         }
       }
     },
+    "/api/ai/questions/generate": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "GenerateQuestions",
+        "parameters": [
+          {
+            "name": "tz",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateQuestionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateQuestionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/questions/accept": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "AcceptQuestionDrafts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptDraftsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptDraftsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/questions/{questionId}/note": {
       "get": {
         "tags": [
@@ -716,6 +805,44 @@
   },
   "components": {
     "schemas": {
+      "AcceptDraftsRequest": {
+        "required": [
+          "drafts"
+        ],
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CreateQuestionRequest"
+            }
+          }
+        }
+      },
+      "AcceptDraftsResponse": {
+        "required": [
+          "accepted",
+          "rejected"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionResponse"
+            }
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectedDraft"
+            }
+          }
+        }
+      },
       "AiStatusResponse": {
         "required": [
           "enabled",
@@ -940,6 +1067,36 @@
           "Senior"
         ]
       },
+      "DraftResponse": {
+        "required": [
+          "topic",
+          "difficulty",
+          "text",
+          "answer",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "topic": {
+            "$ref": "#/components/schemas/Topic"
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/Difficulty"
+          },
+          "text": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ExplainMistakesRequest": {
         "required": [
           "attemptId"
@@ -968,6 +1125,74 @@
           },
           "explanation": {
             "type": "string"
+          }
+        }
+      },
+      "GenerateQuestionsRequest": {
+        "required": [
+          "topic",
+          "difficulty",
+          "count",
+          "tag",
+          "focus"
+        ],
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "difficulty": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tag": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "focus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GenerateQuestionsResponse": {
+        "required": [
+          "drafts",
+          "duplicatesDropped"
+        ],
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftResponse"
+            }
+          },
+          "duplicatesDropped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1218,6 +1443,32 @@
           }
         }
       },
+      "RejectedDraft": {
+        "required": [
+          "index",
+          "errors"
+        ],
+        "type": "object",
+        "properties": {
+          "index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "ReviewRequest": {
         "required": [
           "questionId",
@@ -1313,6 +1564,7 @@
           "text",
           "answer",
           "tags",
+          "source",
           "isNew",
           "intervals"
         ],
@@ -1346,6 +1598,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "source": {
+            "$ref": "#/components/schemas/QuestionSource"
           },
           "isNew": {
             "type": "boolean"

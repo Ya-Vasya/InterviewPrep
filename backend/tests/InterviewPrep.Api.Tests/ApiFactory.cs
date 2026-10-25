@@ -1,5 +1,6 @@
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Ai;
+using InterviewPrep.Api.Features.Questions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -68,7 +69,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         });
     }
 
-    /// <summary>Forgets AI usage, stored answer attempts and notes, and resets the scripted provider.</summary>
+    /// <summary>Forgets AI usage, stored answer attempts, notes and accepted AI questions, and resets the scripted provider.</summary>
     public void ResetAiData()
     {
         Ai.Reset();
@@ -77,6 +78,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Notes.ExecuteDelete();
         db.AnswerAttempts.ExecuteDelete();
+        db.Questions.Where(q => q.Source == QuestionSource.Ai).ExecuteDelete();
         db.AiCalls.ExecuteDelete();
         Clock.Reset();
     }

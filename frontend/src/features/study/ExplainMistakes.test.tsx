@@ -44,6 +44,7 @@ const item = (n: number): StudyQueueItem => ({
   text: `Question ${n}?`,
   answer: `Answer ${n} with \`code\``,
   tags: [],
+  source: 'Seed',
   isNew: true,
   intervals: { again: 0, hard: 1, good: 6, easy: 8 },
 })
