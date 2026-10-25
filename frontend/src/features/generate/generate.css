@@ -1,0 +1,131 @@
+.generate-layout {
+  display: grid;
+  grid-template-columns: var(--panel-width, 300px) 8px minmax(0, 1fr);
+  gap: 0 8px;
+  align-items: start;
+}
+
+/* The drafts panel */
+.draft-panel {
+  display: flex; flex-direction: column; min-width: 0;
+  position: sticky; top: 16px; max-height: calc(100vh - 32px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.draft-panel-header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.85rem;
+}
+.draft-panel-header h2 { margin: 0; font-size: 1rem; color: var(--text); }
+.draft-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; }
+.draft-panel-footer { padding: 10px 12px; border-top: 1px solid var(--border); }
+.draft-panel-footer button { width: 100%; }
+.draft-empty { margin: 0; padding: 12px 14px; color: var(--muted); font-size: 0.9rem; }
+
+.draft-item { position: relative; display: flex; align-items: stretch; border-radius: 8px; }
+.draft-item.is-selected { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.draft-select {
+  display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; padding: 8px 10px; text-align: left;
+  border: 0; background: transparent; color: var(--text); border-radius: 8px;
+}
+.draft-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.draft-state { flex: none; width: 16px; height: 16px; margin-top: 2px; display: inline-flex; }
+.draft-preview {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  font-size: 0.9rem; line-height: 1.35; overflow-wrap: anywhere;
+}
+.draft-saved { color: #2e8b57; display: inline-flex; }
+.draft-problem { color: #c0392b; display: inline-flex; }
+.is-accepted .draft-preview { color: var(--muted); }
+
+/* Hover actions: also visible on keyboard focus and on the selected item, so they work without a mouse */
+.draft-actions {
+  position: absolute; top: 4px; right: 4px; display: none; gap: 2px; padding: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+}
+.draft-item:hover .draft-actions, .draft-item:focus-within .draft-actions, .draft-item.is-selected .draft-actions { display: inline-flex; }
+@media (hover: none) { .draft-actions { display: inline-flex; } }
+/* Make room for the icons so they never cover the text */
+.draft-item.has-actions:hover .draft-select,
+.draft-item.has-actions:focus-within .draft-select,
+.draft-item.has-actions.is-selected .draft-select { padding-right: 68px; }
+@media (hover: none) { .draft-item.has-actions .draft-select { padding-right: 68px; } }
+.icon-button {
+  display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0;
+  border: 0; background: transparent; color: var(--muted); border-radius: 4px;
+}
+.icon-button:hover, .icon-button:focus-visible { background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--text); }
+.icon-danger { color: #c0392b; }
+.icon-danger:hover, .icon-danger:focus-visible { background: color-mix(in srgb, #c0392b 16%, transparent); color: #c0392b; }
+
+.draft-placeholder { align-items: center; padding: 8px 10px; gap: 8px; }
+.draft-skeleton {
+  flex: 1; height: 0.9rem; border-radius: 4px;
+  background: linear-gradient(90deg, var(--border), color-mix(in srgb, var(--border) 40%, transparent), var(--border));
+  background-size: 200% 100%; animation: draft-shimmer 1.4s linear infinite;
+}
+@keyframes draft-shimmer { to { background-position: -200% 0; } }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor;
+  animation: spinner-turn 0.8s linear infinite; vertical-align: -2px;
+}
+@keyframes spinner-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .draft-skeleton { animation: none; }
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* The drag handle between the panel and the main area */
+.generate-separator { align-self: stretch; cursor: col-resize; border-radius: 4px; touch-action: none; position: relative; }
+.generate-separator::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: var(--border); border-radius: 2px;
+}
+.generate-separator:hover::after, .generate-separator:focus-visible::after { background: var(--accent); }
+.generate-separator:focus-visible { outline: none; }
+
+/* Main area */
+.generate-main { display: grid; gap: 16px; min-width: 0; }
+.generate-form {
+  display: grid; gap: 12px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+}
+.generate-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.generate-fields label, .draft-editor label { display: grid; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.generate-focus { grid-column: 1 / -1; }
+.generate-fields input, .draft-editor input, .draft-editor textarea {
+  width: 100%; padding: 8px 10px; font: inherit; font-weight: 400;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+}
+.draft-editor textarea { resize: vertical; font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.9rem; }
+.generate-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:disabled { opacity: 0.5; cursor: default; }
+button.danger { border-color: #c0392b; color: #c0392b; }
+button:disabled { cursor: default; }
+
+.generate-progress, .generate-note { margin: 0; color: var(--muted); }
+.generate-error { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.generate-error p { margin: 0; }
+
+.draft-detail { padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.draft-detail-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+.draft-detail-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.draft-editor { display: grid; gap: 12px; margin-top: 12px; }
+.draft-errors { margin: 12px 0 0; padding-left: 20px; }
+.draft-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 0; }
+.draft-tag { padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; color: var(--muted); border: 1px solid var(--border); }
+.draft-accepted-note { margin: 16px 0 0; color: var(--muted); }
+
+/* Narrow screens: the panel stacks above the main area and there is nothing to resize */
+@media (max-width: 760px) {
+  .generate-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .generate-separator { display: none; }
+  .draft-panel { position: static; max-height: 320px; }
+}

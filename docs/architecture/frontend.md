@@ -19,7 +19,8 @@ frontend/src/
   features/
     questions/                # QuestionList, QuestionCard, filters, AddQuestionForm
     study/                    # StudySession, FlashCard, RatingButtons, useStudyShortcuts
-    ai/                       # AnswerChecker, MistakeExplanation, GenerateDialog
+    ai/                       # AnswerChecker, MistakeExplanation, AI status and usage
+    generate/                 # Generate page: form, resizable Drafts panel, Draft review
     dashboard/                # Dashboard, TopicBars, charts, PlanForm
   components/                 # shared UI only: Button, Select, Markdown, ErrorMessage, Spinner
   hooks/                      # useLocalStorageState, etc.

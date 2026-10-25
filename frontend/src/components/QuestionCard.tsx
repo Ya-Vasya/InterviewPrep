@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Question } from '../api/client'
+import { AiGeneratedLabel } from '../features/ai/AiGeneratedLabel'
 import { Markdown } from './Markdown'
 
 export function QuestionCard({ question, topicName }: { question: Question; topicName: string }) {
@@ -12,6 +13,11 @@ export function QuestionCard({ question, topicName }: { question: Question; topi
         <span className={`level level-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
       </header>
       <p className="question">{question.text}</p>
+      {question.source === 'Ai' && (
+        <p>
+          <AiGeneratedLabel />
+        </p>
+      )}
       {showAnswer ? (
         <Markdown>{question.answer}</Markdown>
       ) : (

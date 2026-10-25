@@ -9,20 +9,24 @@ public sealed class AiOptions
     /// <summary>Most provider calls per day.</summary>
     public int DailyCap { get; set; } = DefaultDailyCap;
 
-    /// <summary>How long the provider may take before a call counts as timed out.</summary>
+    /// <summary>How long the provider may take before a check or explain call counts as timed out.</summary>
     public int TimeoutSeconds { get; set; } = 30;
+
+    /// <summary>Generation writes up to ten long answers in one call, so it gets longer.</summary>
+    public int GenerateTimeoutSeconds { get; set; } = 120;
 
     /// <summary>Output budget per call, thinking included. Bounds the cost of one call.</summary>
     public int CheckMaxOutputTokens { get; set; } = 1500;
     public int ExplainMaxOutputTokens { get; set; } = 2000;
-    public int GenerateMaxOutputTokens { get; set; } = 4000;
 
-    public int MaxOutputTokensFor(AiFeature feature) => feature switch
-    {
-        AiFeature.CheckAnswer => CheckMaxOutputTokens,
-        AiFeature.ExplainMistakes => ExplainMaxOutputTokens,
-        _ => GenerateMaxOutputTokens
-    };
+    /// <summary>Generation scales with the number of questions: this much per question plus the base.</summary>
+    public int GenerateTokensPerQuestion { get; set; } = 800;
+    public int GenerateBaseOutputTokens { get; set; } = 500;
+
+    public int GenerateOutputTokensFor(int count) => GenerateBaseOutputTokens + GenerateTokensPerQuestion * count;
+
+    public int TimeoutSecondsFor(AiFeature feature) =>
+        feature == AiFeature.GenerateQuestions ? GenerateTimeoutSeconds : TimeoutSeconds;
 }
 
 /// <summary>Provider settings, bound from the "Anthropic" section. The key never leaves the backend.</summary>

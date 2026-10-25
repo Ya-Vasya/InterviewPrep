@@ -74,6 +74,7 @@ export interface StudyQueueItem {
   text: string
   answer: string
   tags: string[]
+  source: QuestionSource
   isNew: boolean
   intervals: RatingIntervals
 }
@@ -137,6 +138,48 @@ export interface ExplainMistakesResult {
   attemptId: string
   /** Concise markdown: per mistake what was wrong, why and the correct explanation. */
   explanation: string
+}
+
+/** Most questions one Generation run (and one accept request) may hold. */
+export const MAX_GENERATED_QUESTIONS = 10
+export const MAX_FOCUS_LENGTH = 200
+
+export interface GenerateQuestionsRequest {
+  topic: Topic
+  difficulty: Difficulty
+  /** 1-10, default 5. */
+  count?: number
+  /** Added to every Draft's tags. */
+  tag?: string
+  /** Free text steering the questions, at most 200 characters. */
+  focus?: string
+}
+
+/** A generated question the user has not accepted yet. The server stores nothing about it. */
+export interface Draft {
+  topic: Topic
+  difficulty: Difficulty
+  text: string
+  /** Markdown. */
+  answer: string
+  tags: string[]
+}
+
+export interface GenerateQuestionsResult {
+  drafts: Draft[]
+  /** Drafts skipped because they repeat an existing question or each other. */
+  duplicatesDropped: number
+}
+
+export interface RejectedDraft {
+  /** Position of the Draft in the accept request. */
+  index: number
+  errors: Record<string, string[]>
+}
+
+export interface AcceptDraftsResult {
+  accepted: Question[]
+  rejected: RejectedDraft[]
 }
 
 // --- Notes (mirrors backend/.../Features/Notes/NoteDtos.cs) ---
@@ -235,6 +278,21 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attemptId }),
+    }),
+
+  /** One counted AI call that writes the whole Generation run. Nothing is stored. */
+  generateQuestions: (generate: GenerateQuestionsRequest) =>
+    request<GenerateQuestionsResult>(`/api/ai/questions/generate?${new URLSearchParams({ tz: browserTimeZone() })}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(generate),
+    }),
+  /** Saves the Drafts as AI-sourced questions; the ones that fail validation or repeat a question come back in `rejected`. */
+  acceptDrafts: (drafts: Draft[]) =>
+    request<AcceptDraftsResult>('/api/ai/questions/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ drafts }),
     }),
 
   /** The question's note, or null when it has none. */

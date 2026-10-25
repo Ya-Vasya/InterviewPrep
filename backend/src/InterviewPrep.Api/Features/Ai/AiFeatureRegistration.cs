@@ -9,9 +9,10 @@ public static class AiFeatureRegistration
         services.AddOptions<AiOptions>()
             .BindConfiguration(AiOptions.SectionName)
             .Validate(o => o.DailyCap >= 0, "The AI daily cap cannot be negative.")
-            .Validate(o => o.TimeoutSeconds > 0, "The AI timeout must be positive.")
+            .Validate(o => o.TimeoutSeconds > 0 && o.GenerateTimeoutSeconds > 0, "The AI timeouts must be positive.")
             .Validate(
-                o => o.CheckMaxOutputTokens > 0 && o.ExplainMaxOutputTokens > 0 && o.GenerateMaxOutputTokens > 0,
+                o => o.CheckMaxOutputTokens > 0 && o.ExplainMaxOutputTokens > 0 && o.GenerateTokensPerQuestion > 0
+                     && o.GenerateBaseOutputTokens >= 0,
                 "AI output limits must be positive.")
             .ValidateOnStart();
 

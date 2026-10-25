@@ -13,6 +13,13 @@ export const router = createBrowserRouter([
         path: 'questions',
         lazy: async () => ({ Component: (await import('../features/questions/QuestionsPage')).QuestionsPage }),
       },
+      {
+        path: 'generate',
+        handle: { wide: true },
+        lazy: async () => ({
+          Component: (await import('../features/generate/GenerateQuestionsPage')).GenerateQuestionsPage,
+        }),
+      },
       { path: 'study', element: <StudySetupPage /> },
       {
         path: 'study/session',

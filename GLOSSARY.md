@@ -56,6 +56,14 @@ _Avoid_: Chat, feedback (feedback is the short comment inside a verdict)
 A personal text the user keeps for a question, such as a saved explanation. A question has at most one note, and it belongs to the question rather than to the card.
 _Avoid_: Comment, annotation
 
+**Generation run**:
+One use of the Generate form: the user asks for 1 to 10 questions on a topic and difficulty, and the Drafts appear one at a time as they are produced. A new run replaces the previous Drafts.
+_Avoid_: Batch, job
+
+**Duplicate**:
+A Draft whose wording matches an existing question of the same topic (or another Draft in the same batch), ignoring case, spacing and punctuation. Duplicates are skipped, never shown or saved.
+_Avoid_: Repeat, near-duplicate
+
 **Draft**:
 An AI-generated question the user has not accepted yet. Nothing is stored until it is accepted, and an accepted draft becomes a question with the AI as its source.
 _Avoid_: Suggestion, candidate question

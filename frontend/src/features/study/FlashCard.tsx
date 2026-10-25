@@ -1,6 +1,7 @@
 import type { Rating } from '../../api/client'
 import { TOPIC_NAMES } from '../../api/client'
 import { Markdown } from '../../components/Markdown'
+import { AiGeneratedLabel } from '../ai/AiGeneratedLabel'
 import type { Entry } from './sessionReducer'
 
 interface Props {
@@ -36,6 +37,11 @@ export function FlashCard({ entry, flipped, onFlip, behind, leaving }: Props) {
           <div className="study-face study-face-back" key="back">
             <p className="study-question study-question-small">{item.text}</p>
             <hr />
+            {item.source === 'Ai' && (
+              <p>
+                <AiGeneratedLabel />
+              </p>
+            )}
             <Markdown>{item.answer}</Markdown>
           </div>
         ) : (

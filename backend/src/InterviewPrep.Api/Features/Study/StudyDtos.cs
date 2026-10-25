@@ -1,4 +1,5 @@
 using InterviewPrep.Api.Common;
+using InterviewPrep.Api.Features.Questions;
 
 namespace InterviewPrep.Api.Features.Study;
 
@@ -41,5 +42,6 @@ public sealed record StudyQueueItem(
     string Text,
     string Answer,
     IReadOnlyList<string> Tags,
+    QuestionSource Source,
     bool IsNew,
     RatingIntervals Intervals);

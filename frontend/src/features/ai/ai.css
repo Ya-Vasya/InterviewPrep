@@ -54,6 +54,15 @@
 .ai-confirm p { margin: 0 0 8px; }
 .ai-history .ai-usage { display: block; margin: 8px 0 0; }
 
+.ai-generated-label {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  color: #b26a00; border: 1px solid color-mix(in srgb, #b26a00 45%, transparent);
+  background: color-mix(in srgb, #b26a00 10%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .ai-generated-label { color: #f0a73c; border-color: color-mix(in srgb, #f0a73c 45%, transparent); }
+}
+
 .ai-note {
   margin: 16px 0; padding: 12px 16px; background: var(--surface);
   border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px;
