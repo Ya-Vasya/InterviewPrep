@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import './ai.css'
+import { AiUsage } from './AiUsage'
 import { VerdictLabel } from './CheckResultPanel'
+import { ExplainMistakes } from './ExplainMistakes'
 import { useAiStatus } from './useAiStatus'
 
 interface Props {
@@ -25,6 +27,7 @@ export function AttemptHistory({ questionId, excludeAttemptId }: Props) {
   return (
     <details className="ai-history">
       <summary>Previous attempts ({previous.length})</summary>
+      {previous.some((a) => a.verdict !== 'Correct') && <AiUsage />}
       <ul>
         {previous.map((a) => (
           <li key={a.id}>
@@ -32,6 +35,7 @@ export function AttemptHistory({ questionId, excludeAttemptId }: Props) {
             <time dateTime={a.createdAt}>{new Date(a.createdAt).toLocaleDateString()}</time>
             <blockquote>{a.answer}</blockquote>
             <p>{a.feedback}</p>
+            <ExplainMistakes attemptId={a.id} questionId={questionId} verdict={a.verdict} />
           </li>
         ))}
       </ul>

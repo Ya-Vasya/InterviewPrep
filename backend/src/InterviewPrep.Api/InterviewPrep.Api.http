@@ -43,3 +43,25 @@ DELETE {{host}}/api/study/reviews/11111111-1111-1111-1111-111111111111
 
 ###
 POST {{host}}/api/study/cards/00000000-0000-0000-0000-000000000000/suspend
+
+###
+# Explain the mistakes of a partial or incorrect attempt (attemptId comes from /api/ai/answers/check)
+POST {{host}}/api/ai/answers/explain?tz=Europe/Kyiv
+Content-Type: application/json
+
+{
+  "attemptId": "00000000-0000-0000-0000-000000000000"
+}
+
+###
+# The note of a question (404 when it has none)
+GET {{host}}/api/questions/00000000-0000-0000-0000-000000000000/note
+
+###
+# Create or replace the note of a question
+PUT {{host}}/api/questions/00000000-0000-0000-0000-000000000000/note
+Content-Type: application/json
+
+{
+  "text": "Scoped services live for one request."
+}

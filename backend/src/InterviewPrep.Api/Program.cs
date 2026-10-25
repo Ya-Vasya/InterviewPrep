@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using InterviewPrep.Api.Data;
 using InterviewPrep.Api.Features.Ai;
+using InterviewPrep.Api.Features.Notes;
 using InterviewPrep.Api.Features.Questions;
 using InterviewPrep.Api.Features.Study;
 
@@ -43,6 +44,7 @@ app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }))
 app.MapQuestionEndpoints();
 app.MapStudyEndpoints();
 app.MapAiEndpoints();
+app.MapNoteEndpoints();
 
 app.Run();
 

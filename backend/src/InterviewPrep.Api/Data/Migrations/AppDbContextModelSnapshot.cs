@@ -85,6 +85,23 @@ namespace InterviewPrep.Api.Data.Migrations
                     b.ToTable("AnswerAttempts");
                 });
 
+            modelBuilder.Entity("InterviewPrep.Api.Features.Notes.Note", b =>
+                {
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("QuestionId");
+
+                    b.ToTable("Notes");
+                });
+
             modelBuilder.Entity("InterviewPrep.Api.Features.Questions.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -232,6 +249,17 @@ namespace InterviewPrep.Api.Data.Migrations
                 });
 
             modelBuilder.Entity("InterviewPrep.Api.Features.Ai.AnswerAttempt", b =>
+                {
+                    b.HasOne("InterviewPrep.Api.Features.Questions.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("InterviewPrep.Api.Features.Notes.Note", b =>
                 {
                     b.HasOne("InterviewPrep.Api.Features.Questions.Question", "Question")
                         .WithMany()

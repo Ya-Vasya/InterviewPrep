@@ -5,6 +5,7 @@ import { api, type CheckAnswerResult, type Rating, type ReviewRequest, type Stud
 import { AnswerCheckForm } from '../ai/AnswerCheckForm'
 import { AttemptHistory } from '../ai/AttemptHistory'
 import { CheckResultPanel } from '../ai/CheckResultPanel'
+import { NotePanel } from '../ai/NotePanel'
 import { FlashCard } from './FlashCard'
 import { newGuid } from './format'
 import { RatingButtons } from './RatingButtons'
@@ -171,7 +172,8 @@ export function StudySession({ items, topics }: Props) {
               }}
             />
           )}
-          {state.flipped && currentCheck && <CheckResultPanel result={currentCheck} />}
+          {state.flipped && <NotePanel questionId={entry.item.questionId} />}
+          {state.flipped && currentCheck && <CheckResultPanel result={currentCheck} questionId={entry.item.questionId} />}
           {state.flipped && (
             <AttemptHistory questionId={entry.item.questionId} excludeAttemptId={currentCheck?.attemptId} />
           )}
