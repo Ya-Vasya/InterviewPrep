@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Ai;
-using InterviewPrep.Api.Features.Questions;
 
 namespace InterviewPrep.Api.Tests;
 
@@ -190,7 +187,7 @@ public class GenerateQuestionsTests(ApiFactory factory) : AiTestBase(factory), I
 
         var existingBlock = Ai.Requests[0].User.Split("<existing_questions>")[1].Split("</existing_questions>")[0];
         var lines = existingBlock.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        Assert.Equal(GenerateQuestionsLimits.MaxExistingTexts, lines.Length);
+        Assert.Equal(Factory.Services.GetRequiredService<IOptions<AiOptions>>().Value.MaxExistingQuestionTexts, lines.Length);
         Assert.All(seniorSql, text => Assert.Contains($"- {text}", lines));
         Assert.Empty(result.Drafts);
         Assert.Equal(1, result.DuplicatesDropped);
@@ -325,7 +322,7 @@ public class GenerateQuestionsTests(ApiFactory factory) : AiTestBase(factory), I
     [Fact]
     public void GenerationHasItsOwnLongerTimeout()
     {
-        var options = new AiOptions();
+        var options = new AiOptions { TimeoutSeconds = 30, GenerateTimeoutSeconds = 120 };
 
         Assert.Equal(30, options.TimeoutSecondsFor(AiFeature.CheckAnswer));
         Assert.Equal(30, options.TimeoutSecondsFor(AiFeature.ExplainMistakes));

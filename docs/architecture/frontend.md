@@ -26,7 +26,7 @@ frontend/src/
   hooks/                      # useLocalStorageState, etc.
 ```
 
-Feature folders mirror the backend features (`Features/Study` ↔ `features/study`). `api/` stays the only place that calls `fetch`.
+Feature folders follow the requirement names, and the backend services use the same names (`StudyService` ↔ `features/study`). `api/` stays the only place that calls `fetch`.
 
 ## Decisions
 

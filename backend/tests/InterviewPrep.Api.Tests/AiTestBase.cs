@@ -1,13 +1,11 @@
 using System.Net.Http.Json;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Ai;
 
 namespace InterviewPrep.Api.Tests;
 
 /// <summary>Shared helpers for AI tests: a clean slate, the scripted provider and the status call.</summary>
 public abstract class AiTestBase : StudyTestBase
 {
-    protected FakeAiService Ai => Factory.Ai;
+    protected FakeAiProvider Ai => Factory.Ai;
 
     protected AiTestBase(ApiFactory factory) : base(factory) => factory.ResetAiData();
 

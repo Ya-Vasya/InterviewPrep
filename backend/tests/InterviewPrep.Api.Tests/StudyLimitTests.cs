@@ -1,4 +1,3 @@
-using InterviewPrep.Api.Common;
 
 namespace InterviewPrep.Api.Tests;
 

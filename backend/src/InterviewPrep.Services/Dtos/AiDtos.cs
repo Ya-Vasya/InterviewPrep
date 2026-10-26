@@ -1,0 +1,74 @@
+using InterviewPrep.Data.Models;
+using InterviewPrep.Data.Models.Enums;
+
+namespace InterviewPrep.Services.Dtos;
+
+/// <param name="Enabled">False when no API key is configured; the UI then hides the AI controls.</param>
+/// <param name="UsedToday">Provider calls made during the current day of the requesting browser's time zone.</param>
+public sealed record AiStatusResponse(bool Enabled, int UsedToday, int DailyCap);
+
+/// <summary>Loosely typed so a missing or bad value becomes a validation problem, not a JSON binding failure.</summary>
+public sealed record CheckAnswerRequest(Guid? QuestionId, string? Answer);
+
+/// <param name="AttemptId">Send it with the review so the server can tell the user accepted the suggestion.</param>
+/// <param name="Score">0-100.</param>
+/// <param name="Covered">Key points the user got right.</param>
+/// <param name="Missing">Key points the user left out.</param>
+/// <param name="SuggestedRating">Only a suggestion. A check never rates a card by itself.</param>
+public sealed record CheckAnswerResponse(
+    Guid AttemptId,
+    Verdict Verdict,
+    int Score,
+    IReadOnlyList<string> Covered,
+    IReadOnlyList<string> Missing,
+    string Feedback,
+    Rating SuggestedRating);
+
+/// <summary>Loosely typed so a missing or bad value becomes a validation problem, not a JSON binding failure.</summary>
+/// <param name="AttemptId">The partial or incorrect answer attempt to explain.</param>
+public sealed record ExplainMistakesRequest(Guid? AttemptId);
+
+/// <param name="Explanation">Concise markdown: per mistake what was wrong, why and the correct explanation.</param>
+public sealed record ExplainMistakesResponse(Guid AttemptId, string Explanation);
+
+/// <summary>Topic and difficulty arrive as strings so an unknown value becomes a validation problem.</summary>
+/// <param name="Count">1-10, default 5.</param>
+/// <param name="Tag">Optional subtopic every Draft is tagged with.</param>
+/// <param name="Focus">Optional free text steering the questions, at most 200 characters.</param>
+public sealed record GenerateQuestionsRequest(string? Topic, string? Difficulty, int? Count, string? Tag, string? Focus);
+
+/// <summary>A generated question the user has not accepted yet. Nothing about it is stored.</summary>
+public sealed record DraftResponse(
+    Topic Topic, Difficulty Difficulty, string Text, string Answer, IReadOnlyList<string> Tags);
+
+/// <param name="DuplicatesDropped">Drafts skipped because they repeat an existing question or each other.</param>
+public sealed record GenerateQuestionsResponse(IReadOnlyList<DraftResponse> Drafts, int DuplicatesDropped);
+
+/// <summary>The possibly edited Drafts to save, in the shape of a create-question request.</summary>
+public sealed record AcceptDraftsRequest(IReadOnlyList<CreateQuestionRequest?>? Drafts);
+
+/// <param name="Index">Position of the Draft in the request.</param>
+public sealed record RejectedDraft(int Index, IReadOnlyDictionary<string, string[]> Errors);
+
+public sealed record AcceptDraftsResponse(
+    IReadOnlyList<QuestionResponse> Accepted, IReadOnlyList<RejectedDraft> Rejected);
+
+/// <summary>A stored answer attempt, as listed on the card back.</summary>
+public sealed record AnswerAttemptResponse(
+    Guid Id,
+    Guid QuestionId,
+    string Answer,
+    Verdict Verdict,
+    int Score,
+    IReadOnlyList<string> Covered,
+    IReadOnlyList<string> Missing,
+    string Feedback,
+    DateTime CreatedAt,
+    Rating SuggestedRating);
+
+public static class AiMappings
+{
+    public static AnswerAttemptResponse ToResponse(this AnswerAttempt a) =>
+        new(a.Id, a.QuestionId, a.Answer, a.Verdict, a.Score, a.Covered, a.Missing, a.Feedback, a.CreatedAt,
+            a.Verdict.SuggestedRating());
+}

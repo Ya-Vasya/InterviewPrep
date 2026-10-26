@@ -1,4 +1,3 @@
-using InterviewPrep.Api.Features.Questions;
 
 namespace InterviewPrep.Api.Tests;
 

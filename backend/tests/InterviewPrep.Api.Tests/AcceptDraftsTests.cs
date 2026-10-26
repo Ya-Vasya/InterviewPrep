@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Ai;
-using InterviewPrep.Api.Features.Questions;
 using Microsoft.EntityFrameworkCore;
 
 namespace InterviewPrep.Api.Tests;

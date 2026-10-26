@@ -1,8 +1,4 @@
 using System.Net.Http.Json;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Data;
-using InterviewPrep.Api.Features.Questions;
-using InterviewPrep.Api.Features.Study;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,7 +26,7 @@ public abstract class StudyTestBase
 
     protected async Task<List<QuestionResponse>> GetQuestions(Topic topic) =>
         (await Client.GetFromJsonAsync<PagedResponse<QuestionResponse>>(
-            $"/api/questions?topic={topic}&limit={Paging.MaxLimit}", Json))!.Items.ToList();
+            $"/api/questions?topic={topic}&limit={Factory.Services.GetRequiredService<IOptions<PagingOptions>>().Value.MaxLimit}", Json))!.Items.ToList();
 
     protected Task<HttpResponseMessage> PostReview(Guid questionId, string rating, Guid? reviewId = null) =>
         Client.PostAsJsonAsync(

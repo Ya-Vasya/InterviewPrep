@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using InterviewPrep.Api.Features.Ai;
 
 namespace InterviewPrep.Api.Tests;
 
@@ -22,7 +21,7 @@ public class AiStatusWithoutKeyTests(NoApiKeyFactory factory) : IClassFixture<No
 
         Assert.False(status!.Enabled);
         Assert.Equal(0, status.UsedToday);
-        Assert.Equal(AiOptions.DefaultDailyCap, status.DailyCap);
+        Assert.Equal(factory.Services.GetRequiredService<IOptions<AiOptions>>().Value.DailyCap, status.DailyCap);
     }
 }
 

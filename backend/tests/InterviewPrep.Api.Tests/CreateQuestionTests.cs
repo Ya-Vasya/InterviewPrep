@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Questions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InterviewPrep.Api.Tests;

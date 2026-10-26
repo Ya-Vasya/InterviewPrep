@@ -1,7 +1,4 @@
 using System.Text.Json;
-using InterviewPrep.Api.Data;
-using InterviewPrep.Api.Features.Questions;
-using InterviewPrep.Api.Features.Study;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +11,7 @@ namespace InterviewPrep.Api.Tests;
 /// </summary>
 public class SeedDataTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
-    private static readonly string SeedFile = Path.Combine(AppContext.BaseDirectory, "Data", "SeedData", "questions.json");
+    private static readonly string SeedFile = Path.Combine(AppContext.BaseDirectory, "SeedData", "questions.json");
 
     private static Guid[] SeedFileIds()
     {
@@ -37,6 +34,23 @@ public class SeedDataTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<List<Guid>> SeedRowIds() =>
         WithDb(db => db.Questions.Where(q => q.Source == QuestionSource.Seed).Select(q => q.Id).ToListAsync());
+
+    /// <summary>
+    /// The initializer stores seed tags as written, so the file itself must already hold them in the normalized
+    /// form (trimmed, lowercase, no blanks or duplicates) that <see cref="QuestionTags"/> produces everywhere else.
+    /// </summary>
+    [Fact]
+    public void SeedFile_HasNormalizedTags()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(SeedFile));
+
+        foreach (var entry in doc.RootElement.EnumerateArray())
+        {
+            var tags = entry.GetProperty("tags").EnumerateArray().Select(t => t.GetString()!).ToList();
+
+            Assert.Equal(QuestionTags.NormalizeAll(tags), tags);
+        }
+    }
 
     [Fact]
     public void SeedFile_HasUniqueNonEmptyIds()

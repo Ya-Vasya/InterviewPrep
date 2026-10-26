@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Questions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InterviewPrep.Api.Tests;
@@ -17,6 +15,7 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
     };
 
     private readonly HttpClient _client = factory.CreateClient();
+    private readonly PagingOptions _paging = factory.Services.GetRequiredService<IOptions<PagingOptions>>().Value;
 
     private Task<PagedResponse<QuestionResponse>?> GetPage(string query = "") =>
         _client.GetFromJsonAsync<PagedResponse<QuestionResponse>>($"/api/questions{query}", Json);
@@ -25,7 +24,7 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
     private async Task<List<QuestionResponse>?> GetQuestions(string query = "")
     {
         var separator = query.Length == 0 ? "?" : "&";
-        var page = await GetPage($"{query}{separator}limit={Paging.MaxLimit}");
+        var page = await GetPage($"{query}{separator}limit={_paging.MaxLimit}");
         return page?.Items.ToList();
     }
 
@@ -164,7 +163,7 @@ public class QuestionEndpointsTests(ApiFactory factory) : IClassFixture<ApiFacto
         var page = await GetPage();
 
         Assert.NotNull(page);
-        Assert.Equal(Paging.DefaultLimit, page.Limit);
+        Assert.Equal(_paging.DefaultLimit, page.Limit);
         Assert.Equal(0, page.Offset);
     }
 
