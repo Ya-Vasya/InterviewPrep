@@ -1,20 +1,24 @@
 using System.Text.Json.Serialization;
-using InterviewPrep.Api.Data;
-using InterviewPrep.Api.Features.Ai;
-using InterviewPrep.Api.Features.Notes;
-using InterviewPrep.Api.Features.Questions;
-using InterviewPrep.Api.Features.Study;
+using InterviewPrep.Api.Middleware;
+using InterviewPrep.Data;
+using InterviewPrep.Infrastructure.Extensions;
+using InterviewPrep.Services.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Enums travel as strings. Controllers read the MVC JSON options; the OpenAPI generator reads the shared HTTP ones.
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
-builder.Services.ConfigureHttpJsonOptions(o =>
-    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
-builder.Services.AddPersistence();
-builder.Services.AddStudyFeature();
-builder.Services.AddAiFeature();
+builder.Services.AddConfigurationOptions();
+builder.Services.AddDatabase();
+builder.Services.AddRepositories();
+builder.Services.AddAiProvider();
+builder.Services.AddServices();
 
 const string FrontendCors = "Frontend";
 builder.Services.AddCors(options =>
@@ -27,7 +31,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-await app.InitializeDatabaseAsync();
+await app.Services.InitializeDatabaseAsync();
 
 if (app.Environment.IsDevelopment())
 {
@@ -38,13 +42,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages(); // empty 4xx/5xx responses (404, 405, ...) become ProblemDetails
 app.UseCors(FrontendCors);
 
-app.MapGet("/api/health", () => TypedResults.Ok(new { status = "ok" }))
-   .WithName("Health");
-
-app.MapQuestionEndpoints();
-app.MapStudyEndpoints();
-app.MapAiEndpoints();
-app.MapNoteEndpoints();
+app.MapControllers();
 
 app.Run();
 

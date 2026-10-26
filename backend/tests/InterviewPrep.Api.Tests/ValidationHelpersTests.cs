@@ -1,5 +1,4 @@
-using InterviewPrep.Api.Common;
-using InterviewPrep.Api.Features.Questions;
+using InterviewPrep.Services.Exceptions;
 
 namespace InterviewPrep.Api.Tests;
 
@@ -34,6 +33,7 @@ public class ValidationErrorsTests
 
         Assert.Equal(Topic.Sql, topic);
         Assert.False(errors.Any);
+        errors.ThrowIfAny(); // nothing collected, nothing thrown
     }
 
     [Theory]
@@ -48,7 +48,8 @@ public class ValidationErrorsTests
         Assert.False(errors.TryParseRequired<Topic>("topic", value, out _));
 
         Assert.True(errors.Any);
-        Assert.Equal([message], errors.ToProblem().ProblemDetails.Errors["topic"]);
+        var thrown = Assert.Throws<ValidationException>(errors.ThrowIfAny);
+        Assert.Equal([message], thrown.Errors["topic"]);
     }
 
     [Fact]
@@ -58,12 +59,26 @@ public class ValidationErrorsTests
         errors.Add("text", "first");
         errors.Add("text", "second");
 
-        Assert.Equal(["second"], errors.ToProblem().ProblemDetails.Errors["text"]);
+        var thrown = Assert.Throws<ValidationException>(errors.ThrowIfAny);
+        Assert.Equal(["second"], thrown.Errors["text"]);
+    }
+
+    [Fact]
+    public void RequireZone_FlagsAnUnknownTimeZone_AndFallsBackToUtc()
+    {
+        var errors = new ValidationErrors();
+
+        var zone = errors.RequireZone("Mars/Olympus_Mons");
+
+        Assert.Equal(TimeZoneInfo.Utc, zone);
+        Assert.True(errors.Any);
     }
 }
 
 public class PagingTests
 {
+    private static readonly PagingOptions Options = new() { DefaultLimit = 50, MaxLimit = 200 };
+
     [Theory]
     [InlineData(null, null, 50, 0)]
     [InlineData(1, 0, 1, 0)]
@@ -72,9 +87,10 @@ public class PagingTests
     {
         var errors = new ValidationErrors();
 
-        Assert.True(Paging.TryResolve(limit, offset, errors, out var l, out var o));
+        Assert.True(Paging.TryResolve(limit, offset, Options, errors, out var l, out var o));
 
-        Assert.Equal((expectedLimit, expectedOffset), (l, o));
+        Assert.Equal(expectedLimit, l);
+        Assert.Equal(expectedOffset, o);
     }
 
     [Theory]
@@ -85,7 +101,7 @@ public class PagingTests
     {
         var errors = new ValidationErrors();
 
-        Assert.False(Paging.TryResolve(limit, offset, errors, out _, out _));
+        Assert.False(Paging.TryResolve(limit, offset, Options, errors, out _, out _));
         Assert.True(errors.Any);
     }
 }

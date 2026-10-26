@@ -5,6 +5,9 @@ WORKDIR /src
 
 # Restore first so the layer is cached until a csproj changes.
 COPY src/InterviewPrep.Api/InterviewPrep.Api.csproj src/InterviewPrep.Api/
+COPY src/InterviewPrep.Services/InterviewPrep.Services.csproj src/InterviewPrep.Services/
+COPY src/InterviewPrep.Infrastructure/InterviewPrep.Infrastructure.csproj src/InterviewPrep.Infrastructure/
+COPY src/InterviewPrep.Data/InterviewPrep.Data.csproj src/InterviewPrep.Data/
 RUN dotnet restore src/InterviewPrep.Api/InterviewPrep.Api.csproj
 
 COPY src/ src/

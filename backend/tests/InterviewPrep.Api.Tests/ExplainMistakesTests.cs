@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using InterviewPrep.Api.Features.Ai;
 
 namespace InterviewPrep.Api.Tests;
 
@@ -147,7 +146,7 @@ public class ExplainMistakesTests(ApiFactory factory) : AiTestBase(factory), ICl
     [Fact]
     public async Task TheModelIsGivenTheQuestion_TheReferenceAnswer_AndTheVerdict()
     {
-        var question = (await GetQuestions(Api.Common.Topic.CSharp))[0];
+        var question = (await GetQuestions(Topic.CSharp))[0];
         var attemptId = await CheckedAttempt(question.Id, "partial");
         Ai.Reply(ExplainReply());
 

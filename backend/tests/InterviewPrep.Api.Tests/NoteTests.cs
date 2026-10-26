@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using InterviewPrep.Api.Features.Notes;
 
 namespace InterviewPrep.Api.Tests;
 
@@ -54,8 +53,8 @@ public class NoteTests(ApiFactory factory) : AiTestBase(factory), IClassFixture<
     [Fact]
     public async Task NotesAreKeptPerQuestion()
     {
-        var csharp = await AnyQuestionId(Api.Common.Topic.CSharp);
-        var sql = await AnyQuestionId(Api.Common.Topic.Sql);
+        var csharp = await AnyQuestionId(Topic.CSharp);
+        var sql = await AnyQuestionId(Topic.Sql);
 
         await PutNote(csharp, "about c#");
 

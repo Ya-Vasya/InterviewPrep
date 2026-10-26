@@ -1,6 +1,3 @@
-using InterviewPrep.Api.Data;
-using InterviewPrep.Api.Features.Ai;
-using InterviewPrep.Api.Features.Questions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -38,7 +35,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     public FakeClock Clock { get; } = new();
 
     /// <summary>The scripted LLM. Tests never call the real provider.</summary>
-    public FakeAiService Ai { get; } = new();
+    public FakeAiProvider Ai { get; } = new();
 
     /// <summary>False to run with the real AI wiring (and no API key), e.g. to test the disabled state.</summary>
     protected virtual bool UseFakeAi => true;
@@ -63,8 +60,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
             if (UseFakeAi)
             {
-                services.RemoveAll<IAiService>();
-                services.AddSingleton<IAiService>(Ai);
+                services.RemoveAll<IAiProvider>();
+                services.AddSingleton<IAiProvider>(Ai);
             }
         });
     }
